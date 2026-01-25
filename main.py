@@ -13,8 +13,7 @@ class MultiLayerAggregator(nn.Module):
             nn.Sequential(
                 nn.Conv2d(nhead, nhead // 2, kernel_size=1),
                 nn.GELU(),
-                nn.Conv2d(nhead // 2, 1, kernel_size=1),
-                nn.Sigmoid()  
+                nn.Conv2d(nhead // 2, 1, kernel_size=1)            
             )
             for _ in range(num_layers)
         ])
@@ -73,9 +72,9 @@ class SigmoidAttentionLayer(nn.Module):
         # PRE-LN: Normalize BEFORE attention
         normed = self.norm1(x)
         
-        q = self.q_proj(x).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
+        q = self.q_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
+        k = self.k_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
+        v = self.v_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
 
         raw_scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
 
