@@ -103,7 +103,7 @@ def train_full_dataset():
     model = Scout(d_model=768, nhead=12, num_layers=6)
     model.train()
     
-    optimizer = optim.AdamW(model.parameters(), lr=1e-3) 
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4) 
 
     criterion = nn.MSELoss()
     processed_batches = []
@@ -139,8 +139,7 @@ def train_full_dataset():
             optimizer.zero_grad()
             output_matrix = model(shuffled_emb)
 
-            output_probs = torch.sigmoid(output_matrix)  # Convert to [0,1]
-            loss = criterion(output_probs, shuffled_tgt)
+            loss = criterion(output_matrix, shuffled_tgt)
 
             loss.backward()
             optimizer.step()
@@ -153,11 +152,11 @@ def train_full_dataset():
             print(f"Epoch {epoch:03d} | Avg Loss: {avg_loss:.6f}")
         
         # Exit condition
-        if avg_loss < 0.002:
-            print(f"\nSUCCESS: Reached target loss at Epoch {epoch}!")
-            break
+        # if avg_loss < 0.0005:
+        #     print(f"\nSUCCESS: Reached target loss at Epoch {epoch}!")
+        #     break
             
-        if epoch >= 2000:
+        if epoch >= 300:
             print("Stopped at 2000.")
             break
 
@@ -176,7 +175,7 @@ def train_full_dataset():
     print(f"Random Shuffle Order: {idx.tolist()}")
     
     with torch.no_grad():
-        preds = torch.sigmoid(model(test_emb))
+        preds = model(test_emb)
         
     
     print("\nTarget (First 5x5 of Shuffled Matrix):")
