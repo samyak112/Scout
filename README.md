@@ -1,0 +1,1 @@
+Hi! This project is under experimentation. Scout aims to teach a model to understand when one sentence truly informs or continues another, rather than just sharing keywords or topics. More details in the issues tab: https://github.com/samyak112/Scout/issues/2
