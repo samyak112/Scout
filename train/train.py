@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 import torch.nn.functional as F
 
 
-from training_data import training_data
+from train.training_data import training_data
 from main import Scout
 
 
