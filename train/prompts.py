@@ -272,5 +272,88 @@ The asymmetry_type_distribution in your validation section MUST show equal distr
 - Total across all 5 types must equal 3000
 
 Return ONLY valid JSON. No explanation before or after.
+""",
+"generate_dataset":"""
+
+You are generating a single training batch for a directional information gain model.
+
+BATCH METADATA:
+- Domain: {domain}
+- Information Type: {type_id}
+
+VARIATION PARAMETERS:
+{parameters}
+
+PATTERNS TO FOLLOW:
+Asymmetric Pattern:
+{asymmetric_data}
+
+Symmetric Pattern:
+{symmetric_data}
+
+Hard Negative Strategy:
+{hard_negative_data}
+
+---
+
+YOUR TASK:
+Generate exactly 7 sentences that form one training batch.
+
+BATCH STRUCTURE:
+
+**ASYMMETRIC (3 sentences): pattern**
+Follow thepattern above. Create a 3-sentence chain where:
+- Forward direction (sentence 0 → 1 → 2): HIGH functional value
+- Backward direction (sentence 2 → 1 → 0): LOW functional value
+- Use ALL variation parameters to make sentences specific and concrete
+- Must clearly demonstrate linguistic_principle given above
+
+**SYMMETRIC (2 sentences): Mutual information gain**
+Follow the symmetric pattern above. Create 2 sentences where:
+- Both directions have HIGH mutual value (sentence 0 ↔ sentence 1)
+- Each sentence genuinely informs and enriches the other
+- Use variation parameters where relevant
+
+**HARD_NEGATIVES (2 sentences): Domain-related but useless**
+Follow the hard negative strategy above. Create 2 sentences that:
+- Share domain keywords/context with other sentences
+- Add ZERO functional value to any other sentence
+- Look topically related but are informationally useless
+
+---
+
+CRITICAL REQUIREMENTS:
+
+1. **Use variation parameters**: Incorporate ALL provided parameters into your sentences
+2. **Be specific**: Use concrete details, numbers, names, actions - no vague generalities
+3. **Asymmetric directionality**: 
+   - Forward (0→1→2): Reader gains actionable/functional value
+   - Backward (2→1→0): Reader gains little to no actionable value
+4. **Symmetric mutuality**: Both directions must provide genuine insight
+5. **Hard negative authenticity**: Must truly share domain but help nothing
+
+---
+
+OUTPUT FORMAT:
+
+Return ONLY valid JSON:
+
+{
+  "asymmetric": [
+    "First sentence in the chain",
+    "Second sentence in the chain",
+    "Third sentence in the chain"
+  ],
+  "symmetric": [
+    "First symmetric sentence",
+    "Second symmetric sentence"
+  ],
+  "hard_negatives": [
+    "First hard negative sentence",
+    "Second hard negative sentence"
+  ]
+}
+
+Now generate your batch using the provided metadata and parameters.
 """
 }
