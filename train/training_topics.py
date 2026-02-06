@@ -1,1001 +1,919 @@
-Topics = {
+TOPICS = {
   "curriculum": [
     {
-      "domain": "TROUBLESHOOTING",
-      "domain_description": "Teaches directional gain in problem-solution relationships where solutions add high value to problems but problems add low value to solutions",
+      "domain": "PROCEDURAL_TASKS",
+      "domain_description": "Sequential actions where order creates functional value - strong temporal and causal asymmetry",
       "batch_allocation": 600,
       "information_types": [
         {
-          "type_id": "tech_debugging",
-          "type_description": "Software errors and their fixes - tests asymmetric problem→solution flow",
-          "batch_count": 200,
-          "asymmetric_pattern": {
-            "description": "error_message → diagnostic_step → solution_code",
-            "example": "AttributeError: 'NoneType' object has no attribute 'get' → Check if variable was initialized → Add null check before method call",
-            "why_asymmetric": "Solution adds actionable value to error; error doesn't help someone already implementing the solution"
-          },
-          "symmetric_pattern": {
-            "description": "root_cause ↔ prevention_strategy",
-            "example": "Race condition in thread pool ↔ Use thread-safe queue with locks",
-            "why_symmetric": "Understanding cause helps choose prevention; prevention validates cause hypothesis"
-          },
-          "hard_negative_strategy": {
-            "description": "Same technology/framework mentioned but wrong error type or unrelated feature",
-            "examples": [
-              "Django authentication error paired with Django ORM optimization tip",
-              "React useState error paired with React routing configuration"
-            ],
-            "why_negative": "Shares keywords but solution doesn't address the actual problem type"
-          },
-          "variation_parameters": {
-            "language": {
-              "values": ["python", "javascript", "java", "rust", "sql"],
-              "why_this_varies": "Different type systems, error reporting, and debugging approaches"
-            },
-            "error_category": {
-              "values": ["type_error", "null_reference", "async_timing", "import_resolution"],
-              "why_this_varies": "Each requires fundamentally different diagnostic reasoning"
-            },
-            "context": {
-              "values": ["web_backend", "data_pipeline", "frontend_ui", "cli_tool"],
-              "why_this_varies": "Different constraints and debugging tools available"
-            },
-            "complexity": {
-              "values": ["syntax_level", "logic_level", "architecture_level"],
-              "why_this_varies": "Solution detail and abstraction level differs significantly"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Sample evenly across languages to avoid bias"
-        },
-        {
-          "type_id": "home_repair",
-          "type_description": "Household problems and fixes - tests practical troubleshooting across physical systems",
+          "type_id": "recipe_execution",
+          "type_description": "Cooking steps where temporal sequence determines outcome",
           "batch_count": 150,
           "asymmetric_pattern": {
-            "description": "symptom → diagnosis → repair_action",
-            "example": "Water pools under sink → Check P-trap seal → Replace worn rubber gasket",
-            "why_asymmetric": "Repair instruction adds value to symptom; symptom doesn't help someone already repairing"
+            "asymmetry_type": "TEMPORAL",
+            "linguistic_principle": "Iconicity - cooking steps mirror actual sequence of physical actions",
+            "structure": "preparation_step → cooking_action → result_verification",
+            "example": "Preheat oven to 350°F → Place dough on baking sheet → Bake until golden brown, about 15 minutes",
+            "why_asymmetric": "Steps must occur in physical time order; reversing breaks procedural logic and causes failure",
+            "real_world_application": "Recipes, assembly instructions, procedural documentation"
           },
           "symmetric_pattern": {
-            "description": "maintenance_task ↔ failure_it_prevents",
-            "example": "Clean HVAC filter monthly ↔ Prevents compressor overheating",
-            "why_symmetric": "Maintenance makes sense given failure; failure justifies maintenance effort"
+            "structure": "complementary_technique ↔ alternative_technique (different methods achieving same goal)",
+            "example": "Whisk egg whites until stiff peaks form ↔ Use stand mixer on high for 3-4 minutes",
+            "why_symmetric": "Both provide actionable methods; each elaborates on the other's approach"
           },
           "hard_negative_strategy": {
-            "description": "Same room/appliance but completely different system",
-            "examples": [
-              "Leaky faucet paired with electrical outlet not working",
-              "Refrigerator ice maker issue paired with refrigerator light bulb replacement"
-            ],
-            "why_negative": "Same appliance keywords but functionally independent systems"
+            "description": "Cooking facts that share ingredients/tools but provide no procedural value",
+            "examples": ["Butter contains 80% fat", "Ovens were invented in 1490"],
+            "why_negative": "Domain-relevant facts that don't advance the cooking procedure"
           },
           "variation_parameters": {
-            "system": {
-              "values": ["plumbing", "electrical", "hvac", "appliance", "structural"],
-              "why_this_varies": "Completely different tools, skills, and safety considerations"
+            "dish_type": {
+              "values": ["baking", "sautéing", "grilling", "boiling", "roasting"],
+              "why_this_varies": "Different cooking methods have fundamentally different temporal sequences"
             },
-            "urgency": {
-              "values": ["emergency", "needs_attention", "preventive"],
-              "why_this_varies": "Changes solution approach and detail level"
+            "complexity_level": {
+              "values": ["single_step", "multi_component", "advanced_technique", "restaurant_quality"],
+              "why_this_varies": "Complexity changes the number and dependency structure of steps"
             },
-            "skill_required": {
-              "values": ["diy_simple", "diy_moderate", "call_professional"],
-              "why_this_varies": "Affects solution specificity and safety warnings"
+            "cuisine_tradition": {
+              "values": ["french", "italian", "asian", "mexican", "american"],
+              "why_this_varies": "Different traditions have unique technique sequences and ingredient preparations"
             },
-            "location": {
-              "values": ["kitchen", "bathroom", "basement", "exterior"],
-              "why_this_varies": "Different environmental factors and system types"
+            "temperature_dependency": {
+              "values": ["precise_temp_critical", "range_acceptable", "room_temp", "chilled"],
+              "why_this_varies": "Temperature requirements create different temporal constraints"
             }
           },
-          "combination_space": 240,
-          "notes": "Include safety warnings in emergency scenarios"
+          "combination_space": 400,
+          "notes": "Sample evenly across complexity levels to ensure temporal dependency variety"
         },
         {
-          "type_id": "medical_symptoms",
-          "type_description": "Symptoms and their clinical responses - tests diagnostic reasoning flows",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "presenting_symptom → clinical_assessment → intervention",
-            "example": "Persistent dry cough over 3 weeks → Check for postnasal drip and GERD → Elevate bed head, avoid late meals",
-            "why_asymmetric": "Intervention addresses symptom; symptom doesn't guide someone already treating"
-          },
-          "symmetric_pattern": {
-            "description": "risk_factor ↔ screening_recommendation",
-            "example": "Family history of colon cancer ↔ Colonoscopy starting age 40",
-            "why_symmetric": "Risk factor justifies screening; screening targets risk factor"
-          },
-          "hard_negative_strategy": {
-            "description": "Same body system but unrelated conditions",
-            "examples": [
-              "Chest pain from heartburn paired with advice for asthma management",
-              "Knee arthritis paired with ankle sprain treatment"
-            ],
-            "why_negative": "Same anatomical area but different pathophysiology"
-          },
-          "variation_parameters": {
-            "body_system": {
-              "values": ["respiratory", "digestive", "musculoskeletal", "cardiovascular", "neurological"],
-              "why_this_varies": "Different diagnostic approaches and treatment modalities"
-            },
-            "severity": {
-              "values": ["seek_emergency", "schedule_appointment", "self_care"],
-              "why_this_varies": "Dramatically changes appropriate response"
-            },
-            "chronicity": {
-              "values": ["acute_new", "chronic_stable", "chronic_worsening"],
-              "why_this_varies": "Affects urgency and investigation depth"
-            },
-            "age_group": {
-              "values": ["pediatric", "adult", "geriatric"],
-              "why_this_varies": "Different differential diagnoses and treatment considerations"
-            }
-          },
-          "combination_space": 180,
-          "notes": "Always include appropriate medical disclaimers"
-        },
-        {
-          "type_id": "device_troubleshooting",
-          "type_description": "Consumer electronics issues and solutions",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "malfunction → diagnostic_test → fix_procedure",
-            "example": "Laptop won't charge → Check LED indicator and try different outlet → Replace AC adapter",
-            "why_asymmetric": "Fix procedure resolves malfunction; malfunction doesn't help someone already fixing"
-          },
-          "symmetric_pattern": {
-            "description": "feature_limitation ↔ workaround_method",
-            "example": "Smart TV doesn't support VPN apps ↔ Configure VPN on router level",
-            "why_symmetric": "Limitation explains why workaround needed; workaround addresses limitation"
-          },
-          "hard_negative_strategy": {
-            "description": "Same device brand/model but different component issue",
-            "examples": [
-              "iPhone battery drain paired with iPhone speaker distortion fix",
-              "Printer paper jam paired with printer WiFi connection troubleshooting"
-            ],
-            "why_negative": "Same device but independent hardware/software systems"
-          },
-          "variation_parameters": {
-            "device_category": {
-              "values": ["smartphone", "laptop", "printer", "smart_home", "audio"],
-              "why_this_varies": "Different interfaces, components, and user expectations"
-            },
-            "issue_type": {
-              "values": ["hardware_failure", "software_bug", "connectivity", "performance"],
-              "why_this_varies": "Requires different diagnostic and solution approaches"
-            },
-            "warranty_status": {
-              "values": ["under_warranty", "out_of_warranty", "diy_only"],
-              "why_this_varies": "Changes whether to suggest repair vs replacement vs DIY"
-            }
-          },
-          "combination_space": 180,
-          "notes": "Consider warranty implications in solutions"
-        }
-      ]
-    },
-    {
-      "domain": "PROCEDURAL_KNOWLEDGE",
-      "domain_description": "Teaches directional gain in goal-method relationships where methods add value to goals but goals don't add value to methods already being executed",
-      "batch_allocation": 500,
-      "information_types": [
-        {
-          "type_id": "cooking_techniques",
-          "type_description": "Culinary goals and execution methods",
-          "batch_count": 175,
-          "asymmetric_pattern": {
-            "description": "desired_outcome → technique → execution_detail",
-            "example": "Achieve crispy chicken skin → Use dry brine overnight → Pat dry, refrigerate uncovered 8 hours",
-            "why_asymmetric": "Execution detail enables outcome; outcome doesn't help someone already executing"
-          },
-          "symmetric_pattern": {
-            "description": "ingredient_property ↔ cooking_method",
-            "example": "High-starch potatoes ↔ Best for fluffy mashed potatoes",
-            "why_symmetric": "Property explains why method works; method leverages property"
-          },
-          "hard_negative_strategy": {
-            "description": "Same cuisine or ingredient but different dish goals",
-            "examples": [
-              "Making pasta al dente paired with making pasta dough from scratch",
-              "Grilling steak paired with making beef stock"
-            ],
-            "why_negative": "Same ingredient domain but functionally unrelated preparations"
-          },
-          "variation_parameters": {
-            "cuisine": {
-              "values": ["italian", "chinese", "french", "indian", "mexican"],
-              "why_this_varies": "Different flavor principles and techniques"
-            },
-            "cooking_method": {
-              "values": ["sauté", "roast", "braise", "steam", "grill"],
-              "why_this_varies": "Fundamentally different heat transfer and timing"
-            },
-            "main_ingredient": {
-              "values": ["poultry", "seafood", "vegetables", "grains", "beef"],
-              "why_this_varies": "Different textures, cooking times, and doneness indicators"
-            },
-            "skill_level": {
-              "values": ["beginner", "intermediate", "advanced"],
-              "why_this_varies": "Changes technique complexity and assumed knowledge"
-            },
-            "goal_type": {
-              "values": ["texture", "flavor", "presentation", "timing"],
-              "why_this_varies": "Different success criteria require different techniques"
-            }
-          },
-          "combination_space": 300,
-          "notes": "Include food safety where relevant"
-        },
-        {
-          "type_id": "learning_strategies",
-          "type_description": "Educational goals and study methods",
+          "type_id": "assembly_instructions",
+          "type_description": "Physical construction where component order determines structural integrity",
           "batch_count": 150,
           "asymmetric_pattern": {
-            "description": "learning_goal → study_strategy → implementation",
-            "example": "Master organic chemistry reactions → Use mechanism mapping → Draw electron flow for each step daily",
-            "why_asymmetric": "Implementation enables goal; goal doesn't help someone already implementing"
+            "asymmetry_type": "TEMPORAL",
+            "linguistic_principle": "Iconicity - assembly sequence mirrors physical construction reality",
+            "structure": "foundation_component → connecting_component → securing_action",
+            "example": "Attach metal frame to base plate → Slide wooden panel into frame slots → Tighten corner screws clockwise until snug",
+            "why_asymmetric": "Later steps physically depend on earlier completion; reverse order is impossible",
+            "real_world_application": "Furniture assembly, device setup, construction manuals"
           },
           "symmetric_pattern": {
-            "description": "cognitive_principle ↔ technique_application",
-            "example": "Spaced repetition strengthens memory ↔ Review flashcards at increasing intervals",
-            "why_symmetric": "Principle explains why technique works; technique applies principle"
+            "structure": "tool_option_A ↔ tool_option_B (interchangeable tools for same step)",
+            "example": "Use Phillips screwdriver for cross-head screws ↔ Power drill with PH2 bit works faster",
+            "why_symmetric": "Both explain tool selection; each helps understand the other's trade-offs"
           },
           "hard_negative_strategy": {
-            "description": "Same subject area but different skill being developed",
-            "examples": [
-              "Memorizing vocabulary paired with improving pronunciation",
-              "Understanding calculus concepts paired with improving calculation speed"
-            ],
-            "why_negative": "Same subject but orthogonal skills requiring different approaches"
-          },
-          "variation_parameters": {
-            "subject_domain": {
-              "values": ["stem", "language", "humanities", "arts", "professional_skills"],
-              "why_this_varies": "Different types of knowledge require different encoding strategies"
-            },
-            "learning_phase": {
-              "values": ["initial_acquisition", "comprehension", "mastery", "retention"],
-              "why_this_varies": "Different phases need different study approaches"
-            },
-            "resource_availability": {
-              "values": ["self_study", "with_instructor", "peer_group", "online_course"],
-              "why_this_varies": "Changes what methods are practical"
-            },
-            "time_constraint": {
-              "values": ["intensive_weeks", "regular_semester", "long_term_years"],
-              "why_this_varies": "Affects pacing and technique selection"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Consider learning science research backing"
-        },
-        {
-          "type_id": "project_planning",
-          "type_description": "Project goals and execution workflows",
-          "batch_count": 175,
-          "asymmetric_pattern": {
-            "description": "project_objective → planning_approach → execution_steps",
-            "example": "Launch product in 6 months → Use agile sprints → 2-week iterations with daily standups",
-            "why_asymmetric": "Execution steps achieve objective; objective doesn't guide someone mid-execution"
-          },
-          "symmetric_pattern": {
-            "description": "constraint ↔ mitigation_strategy",
-            "example": "Limited budget ↔ Prioritize MVP features only",
-            "why_symmetric": "Constraint necessitates strategy; strategy addresses constraint"
-          },
-          "hard_negative_strategy": {
-            "description": "Same project type but different phase or concern",
-            "examples": [
-              "User research methods paired with deployment infrastructure planning",
-              "Team formation advice paired with post-launch metrics tracking"
-            ],
-            "why_negative": "Same project domain but non-overlapping lifecycle phases"
-          },
-          "variation_parameters": {
-            "project_type": {
-              "values": ["software_development", "marketing_campaign", "construction", "research_study", "event_planning"],
-              "why_this_varies": "Different deliverables and success metrics"
-            },
-            "team_size": {
-              "values": ["solo", "small_team_5", "medium_team_20", "large_team_50plus"],
-              "why_this_varies": "Different coordination and communication needs"
-            },
-            "uncertainty_level": {
-              "values": ["well_defined", "some_unknowns", "highly_exploratory"],
-              "why_this_varies": "Affects planning approach and flexibility needed"
-            },
-            "timeline": {
-              "values": ["sprint_weeks", "quarter_months", "annual_longterm"],
-              "why_this_varies": "Changes planning granularity and checkpoints"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Include risk management considerations"
-        }
-      ]
-    },
-    {
-      "domain": "CONCEPTUAL_KNOWLEDGE",
-      "domain_description": "Teaches symmetric information gain where abstract concepts and concrete examples mutually reinforce understanding",
-      "batch_allocation": 450,
-      "information_types": [
-        {
-          "type_id": "theory_examples",
-          "type_description": "Abstract principles and concrete instantiations",
-          "batch_count": 175,
-          "asymmetric_pattern": {
-            "description": "abstract_principle → application_context → concrete_implementation",
-            "example": "Compound interest grows exponentially → Retirement savings → $500 monthly at 7% becomes $1.2M in 30 years",
-            "why_asymmetric": "Implementation makes principle tangible; principle doesn't add value to someone already implementing"
-          },
-          "symmetric_pattern": {
-            "description": "theory ↔ illustrative_example",
-            "example": "Supply and demand determine price ↔ Concert ticket prices spike when popular artist announced",
-            "why_symmetric": "Theory explains example; example demonstrates theory"
-          },
-          "hard_negative_strategy": {
-            "description": "Same conceptual domain but unrelated principles",
-            "examples": [
-              "Marginal utility theory paired with example of comparative advantage",
-              "Newton's first law paired with example of wave interference"
-            ],
-            "why_negative": "Same field but principle doesn't explain the example"
-          },
-          "variation_parameters": {
-            "field": {
-              "values": ["economics", "physics", "psychology", "biology", "mathematics"],
-              "why_this_varies": "Different types of models and evidence"
-            },
-            "abstraction_level": {
-              "values": ["fundamental_law", "derived_principle", "emergent_pattern"],
-              "why_this_varies": "Changes how directly theory connects to examples"
-            },
-            "example_context": {
-              "values": ["everyday_life", "historical_event", "thought_experiment", "lab_result"],
-              "why_this_varies": "Different types of evidence and applicability"
-            },
-            "complexity": {
-              "values": ["introductory", "intermediate", "advanced"],
-              "why_this_varies": "Changes mathematical sophistication and prerequisite knowledge"
-            },
-            "domain_specificity": {
-              "values": ["universal_principle", "domain_specific", "special_case"],
-              "why_this_varies": "Affects generalizability of the relationship"
-            }
-          },
-          "combination_space": 360,
-          "notes": "Ensure examples genuinely illustrate stated principles"
-        },
-        {
-          "type_id": "definitional_relationships",
-          "type_description": "Technical terms and their formal definitions",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "informal_understanding → formal_definition → rigorous_criterion",
-            "example": "Function that 'doesn't jump' → Continuous function → For all ε>0 exists δ>0 such that |x-a|<δ implies |f(x)-f(a)|<ε",
-            "why_asymmetric": "Rigor refines understanding; informal notion doesn't add precision to formal definition"
-          },
-          "symmetric_pattern": {
-            "description": "technical_term ↔ defining_property",
-            "example": "Prime number ↔ Divisible only by 1 and itself",
-            "why_symmetric": "Term requires property; property defines term"
-          },
-          "hard_negative_strategy": {
-            "description": "Same field but unrelated definitions",
-            "examples": [
-              "Definition of median paired with definition of variance",
-              "Definition of mammal paired with definition of ecosystem"
-            ],
-            "why_negative": "Same domain vocabulary but independent concepts"
-          },
-          "variation_parameters": {
-            "discipline": {
-              "values": ["mathematics", "computer_science", "law", "medicine", "linguistics"],
-              "why_this_varies": "Different standards of rigor and definition types"
-            },
-            "formality": {
-              "values": ["colloquial", "technical", "axiomatic"],
-              "why_this_varies": "Different precision levels and use cases"
-            },
-            "concept_type": {
-              "values": ["object", "property", "relation", "operation"],
-              "why_this_varies": "Different logical structures and definition patterns"
-            }
-          },
-          "combination_space": 135,
-          "notes": "Include both necessary and sufficient conditions where applicable"
-        },
-        {
-          "type_id": "analogical_reasoning",
-          "type_description": "Cross-domain analogies that transfer understanding",
-          "batch_count": 150,
-          "asymmetric_pattern": {
-            "description": "unfamiliar_concept → analogical_bridge → familiar_domain",
-            "example": "Quantum superposition → Like coin spinning in air → Not heads or tails until observed",
-            "why_asymmetric": "Analogy clarifies unfamiliar; familiar domain doesn't add to someone already understanding target"
-          },
-          "symmetric_pattern": {
-            "description": "structural_similarity ↔ parallel_domains",
-            "example": "Natural selection in biology ↔ Algorithm evolution in genetic programming",
-            "why_symmetric": "Each domain illuminates mechanisms in the other"
-          },
-          "hard_negative_strategy": {
-            "description": "Surface similarity without structural mapping",
-            "examples": [
-              "Atom structure paired with solar system (outdated analogy)",
-              "Brain as computer paired with actual neural network architecture details"
-            ],
-            "why_negative": "Superficial resemblance but analogy breaks down functionally"
-          },
-          "variation_parameters": {
-            "source_domain": {
-              "values": ["physical_systems", "social_systems", "biological_systems", "computational_systems"],
-              "why_this_varies": "Different types of mappable relationships"
-            },
-            "target_domain": {
-              "values": ["abstract_math", "quantum_physics", "economics", "cognition"],
-              "why_this_varies": "Different unfamiliar concepts needing explanation"
-            },
-            "mapping_quality": {
-              "values": ["strong_isomorphism", "partial_mapping", "metaphorical"],
-              "why_this_varies": "Affects pedagogical value and limitations"
-            },
-            "audience": {
-              "values": ["lay_public", "students", "interdisciplinary_experts"],
-              "why_this_varies": "Changes appropriate source domain familiarity"
-            }
-          },
-          "combination_space": 256,
-          "notes": "Note where analogies break down"
-        }
-      ]
-    },
-    {
-      "domain": "CAUSAL_RELATIONSHIPS",
-      "domain_description": "Teaches directional gain in cause-effect flows where effects explain causes but causes don't derive from effects",
-      "batch_allocation": 400,
-      "information_types": [
-        {
-          "type_id": "physical_causation",
-          "type_description": "Physical mechanisms and their observable outcomes",
-          "batch_count": 150,
-          "asymmetric_pattern": {
-            "description": "mechanism → intermediate_process → observable_effect",
-            "example": "Friction generates heat → Kinetic energy converts to thermal → Brake pads glow red when stopping",
-            "why_asymmetric": "Effect demonstrates mechanism; mechanism doesn't follow from observing effect alone"
-          },
-          "symmetric_pattern": {
-            "description": "physical_condition ↔ equilibrium_state",
-            "example": "Pressure increases ↔ Boiling point rises",
-            "why_symmetric": "Condition determines state; state implies condition"
-          },
-          "hard_negative_strategy": {
-            "description": "Same physical domain but unrelated causal chains",
-            "examples": [
-              "Why ice floats paired with why magnets attract",
-              "Thermal expansion explanation paired with sound wave propagation"
-            ],
-            "why_negative": "Same physics domain but independent mechanisms"
-          },
-          "variation_parameters": {
-            "physics_domain": {
-              "values": ["thermodynamics", "mechanics", "electromagnetism", "optics", "fluid_dynamics"],
-              "why_this_varies": "Different fundamental forces and equations"
-            },
-            "scale": {
-              "values": ["molecular", "everyday", "planetary", "cosmological"],
-              "why_this_varies": "Different dominant effects at different scales"
-            },
-            "observability": {
-              "values": ["directly_visible", "requires_instruments", "inferred_from_data"],
-              "why_this_varies": "Changes how cause-effect is established"
-            },
-            "reversibility": {
-              "values": ["reversible", "irreversible", "partially_reversible"],
-              "why_this_varies": "Affects whether effect can be undone"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Include energy conservation principles"
-        },
-        {
-          "type_id": "behavioral_causation",
-          "type_description": "Psychological/social causes and behavioral outcomes",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "underlying_motivation → decision_process → observable_behavior",
-            "example": "Loss aversion bias → Overweight risks vs benefits → Hold losing stocks too long",
-            "why_asymmetric": "Behavior evidences motivation; motivation isn't deducible from behavior alone"
-          },
-          "symmetric_pattern": {
-            "description": "social_norm ↔ compliance_behavior",
-            "example": "Turn-taking in conversation ↔ People wait for pauses to speak",
-            "why_symmetric": "Norm shapes behavior; behavior reinforces norm"
-          },
-          "hard_negative_strategy": {
-            "description": "Same behavioral domain but unrelated mechanisms",
-            "examples": [
-              "Confirmation bias explanation paired with example of anchoring effect",
-              "Groupthink dynamics paired with individual procrastination"
-            ],
-            "why_negative": "Same psychology domain but different causal mechanisms"
-          },
-          "variation_parameters": {
-            "psych_mechanism": {
-              "values": ["cognitive_bias", "motivation", "emotion", "social_influence", "habit"],
-              "why_this_varies": "Different psychological drivers and interventions"
-            },
-            "context": {
-              "values": ["individual_decision", "group_dynamics", "organizational", "societal"],
-              "why_this_varies": "Different levels of analysis and factors"
-            },
-            "outcome_type": {
-              "values": ["choice", "judgment", "action", "belief_formation"],
-              "why_this_varies": "Different behavioral endpoints"
-            },
-            "evidence_strength": {
-              "values": ["well_established", "emerging_research", "theoretical"],
-              "why_this_varies": "Different levels of scientific consensus"
-            }
-          },
-          "combination_space": 256,
-          "notes": "Acknowledge individual differences in applicability"
-        },
-        {
-          "type_id": "systemic_causation",
-          "type_description": "Complex system dynamics and emergent outcomes",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "system_structure → feedback_dynamics → emergent_behavior",
-            "example": "Positive feedback in housing market → Prices rising attracts speculators → Bubble formation",
-            "why_asymmetric": "Emergence follows from structure; structure isn't derivable from outcome alone"
-          },
-          "symmetric_pattern": {
-            "description": "system_component ↔ network_effect",
-            "example": "More users on platform ↔ Platform becomes more valuable",
-            "why_symmetric": "Components create effect; effect reinforces components"
-          },
-          "hard_negative_strategy": {
-            "description": "Same system type but different dynamics",
-            "examples": [
-              "Traffic congestion causes paired with traffic safety statistics",
-              "Ecosystem predator-prey dynamics paired with nutrient cycling"
-            ],
-            "why_negative": "Same system but independent causal pathways"
-          },
-          "variation_parameters": {
-            "system_type": {
-              "values": ["economic", "ecological", "technological", "social", "biological"],
-              "why_this_varies": "Different components and interaction rules"
-            },
-            "feedback_type": {
-              "values": ["positive_reinforcing", "negative_balancing", "delayed", "nonlinear"],
-              "why_this_varies": "Different stability and prediction characteristics"
-            },
-            "scale": {
-              "values": ["micro_local", "meso_regional", "macro_global"],
-              "why_this_varies": "Different relevant factors and timescales"
-            },
-            "predictability": {
-              "values": ["deterministic", "stochastic", "chaotic"],
-              "why_this_varies": "Different ability to forecast outcomes"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Highlight feedback loops and non-obvious effects"
-        }
-      ]
-    },
-    {
-      "domain": "CONVERSATIONAL_PRAGMATICS",
-      "domain_description": "Teaches directional gain in dialogue where responses add value to questions but questions don't add value to responses",
-      "batch_allocation": 350,
-      "information_types": [
-        {
-          "type_id": "question_answering",
-          "type_description": "Information requests and relevant responses",
-          "batch_count": 150,
-          "asymmetric_pattern": {
-            "description": "question → clarifying_context → informative_answer",
-            "example": "What time does the store close? → During weekdays → 9 PM Monday-Friday, 10 PM weekends",
-            "why_asymmetric": "Answer satisfies question; question doesn't help someone already knowing answer"
-          },
-          "symmetric_pattern": {
-            "description": "question_constraint ↔ answer_qualification",
-            "example": "Need gluten-free options? ↔ All items marked with GF symbol",
-            "why_symmetric": "Constraint explains qualification; qualification addresses constraint"
-          },
-          "hard_negative_strategy": {
-            "description": "Same topic domain but answer addresses different question",
-            "examples": [
-              "Store hours question paired with store location directions",
-              "Product price question paired with product return policy"
-            ],
-            "why_negative": "Same business but answer doesn't address the actual question"
-          },
-          "variation_parameters": {
-            "question_type": {
-              "values": ["factual", "procedural", "recommendation", "comparison", "troubleshooting"],
-              "why_this_varies": "Different answer structures and completeness criteria"
-            },
-            "domain": {
-              "values": ["customer_service", "technical_support", "health_info", "directions", "scheduling"],
-              "why_this_varies": "Different background knowledge assumed and precision needed"
-            },
-            "specificity": {
-              "values": ["broad_general", "specific_constrained", "highly_personalized"],
-              "why_this_varies": "Changes answer detail and context needed"
-            },
-            "urgency": {
-              "values": ["time_sensitive", "planning_ahead", "casual_inquiry"],
-              "why_this_varies": "Affects answer prioritization and detail"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Ensure answers are complete and actionable"
-        },
-        {
-          "type_id": "advice_seeking",
-          "type_description": "Situation descriptions and actionable guidance",
-          "batch_count": 125,
-          "asymmetric_pattern": {
-            "description": "situation → analysis → recommended_action",
-            "example": "Job offer but hesitant about relocation → Weigh career growth vs personal ties → Request remote work hybrid option",
-            "why_asymmetric": "Action addresses situation; situation doesn't guide someone already acting"
-          },
-          "symmetric_pattern": {
-            "description": "constraint ↔ adapted_strategy",
-            "example": "Limited time to exercise ↔ High-intensity 20-minute workouts",
-            "why_symmetric": "Constraint necessitates adaptation; adaptation acknowledges constraint"
-          },
-          "hard_negative_strategy": {
-            "description": "Same life domain but unrelated concern",
-            "examples": [
-              "Career decision advice paired with salary negotiation tactics",
-              "Relationship conflict paired with dating profile tips"
-            ],
-            "why_negative": "Same general domain but advice doesn't address the specific situation"
-          },
-          "variation_parameters": {
-            "life_domain": {
-              "values": ["career", "relationships", "finance", "health", "education"],
-              "why_this_varies": "Different values and decision factors"
-            },
-            "decision_type": {
-              "values": ["binary_choice", "optimization", "conflict_resolution", "goal_setting"],
-              "why_this_varies": "Different advice structures and frameworks"
-            },
-            "stakes": {
-              "values": ["low_reversible", "moderate_significant", "high_irreversible"],
-              "why_this_varies": "Changes risk tolerance and deliberation depth"
-            },
-            "information_state": {
-              "values": ["well_informed", "some_unknowns", "highly_uncertain"],
-              "why_this_varies": "Affects whether advice focuses on decision or information gathering"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Acknowledge personal values in advice framing"
-        },
-        {
-          "type_id": "clarification_dialogue",
-          "type_description": "Ambiguous statements and disambiguating follow-ups",
-          "batch_count": 75,
-          "asymmetric_pattern": {
-            "description": "ambiguous_statement → clarifying_question → specific_resolution",
-            "example": "The meeting was moved → To earlier or later? → Moved to 2 PM from 4 PM",
-            "why_asymmetric": "Resolution answers clarification; clarification doesn't help someone already resolved"
-          },
-          "symmetric_pattern": {
-            "description": "vague_reference ↔ context_that_resolves",
-            "example": "Send it to the client ↔ Which client - the Smith account?",
-            "why_symmetric": "Vagueness prompts specification; specification resolves vagueness"
-          },
-          "hard_negative_strategy": {
-            "description": "Same conversation topic but orthogonal ambiguity",
-            "examples": [
-              "Time ambiguity paired with location clarification",
-              "Person reference ambiguity paired with document version clarification"
-            ],
-            "why_negative": "Same conversation but clarification addresses different ambiguity"
-          },
-          "variation_parameters": {
-            "ambiguity_type": {
-              "values": ["referential", "temporal", "quantitative", "modal", "scope"],
-              "why_this_varies": "Different types of clarifying questions needed"
-            },
-            "context": {
-              "values": ["work_coordination", "social_plans", "technical_specs", "instructions"],
-              "why_this_varies": "Different stakes and precision requirements"
-            },
-            "resolution_method": {
-              "values": ["binary_choice", "specification", "example", "definition"],
-              "why_this_varies": "Different clarification strategies"
-            }
-          },
-          "combination_space": 108,
-          "notes": "Model realistic conversational repair patterns"
-        }
-      ]
-    },
-    {
-      "domain": "OPTIMIZATION_AND_IMPROVEMENT",
-      "domain_description": "Teaches directional gain where improvements add value to baseline states but baseline states don't add value to improvements",
-      "batch_allocation": 350,
-      "information_types": [
-        {
-          "type_id": "performance_optimization",
-          "type_description": "Baseline performance and enhancement techniques",
-          "batch_count": 150,
-          "asymmetric_pattern": {
-            "description": "performance_metric → bottleneck_analysis → optimization_technique",
-            "example": "Database queries slow → N+1 query problem identified → Implement eager loading",
-            "why_asymmetric": "Optimization improves metric; metric doesn't guide someone already optimizing"
-          },
-          "symmetric_pattern": {
-            "description": "resource_constraint ↔ efficiency_approach",
-            "example": "Limited memory available ↔ Use streaming instead of loading full dataset",
-            "why_symmetric": "Constraint necessitates efficiency; efficiency addresses constraint"
-          },
-          "hard_negative_strategy": {
-            "description": "Same system but unrelated performance dimension",
-            "examples": [
-              "Speed optimization paired with security hardening",
-              "Memory efficiency paired with user interface improvements"
-            ],
-            "why_negative": "Same system but optimization doesn't address stated metric"
-          },
-          "variation_parameters": {
-            "system_type": {
-              "values": ["web_application", "data_processing", "mobile_app", "algorithm", "infrastructure"],
-              "why_this_varies": "Different performance bottlenecks and optimization techniques"
-            },
-            "metric": {
-              "values": ["latency", "throughput", "resource_usage", "cost", "scalability"],
-              "why_this_varies": "Different optimization targets and tradeoffs"
-            },
-            "optimization_approach": {
-              "values": ["caching", "parallelization", "algorithm_improvement", "architecture_change"],
-              "why_this_varies": "Different implementation complexity and gains"
-            },
-            "constraint": {
-              "values": ["backwards_compatible", "no_new_dependencies", "zero_downtime", "budget_limited"],
-              "why_this_varies": "Different viable optimization strategies"
-            }
-          },
-          "combination_space": 256,
-          "notes": "Include measurement before/after optimization"
-        },
-        {
-          "type_id": "skill_improvement",
-          "type_description": "Current skill level and advancement techniques",
-          "batch_count": 100,
-          "asymmetric_pattern": {
-            "description": "skill_plateau → weakness_diagnosis → targeted_practice",
-            "example": "Chess rating stuck at 1400 → Weak endgame knowledge → Study rook endgames 30 min daily",
-            "why_asymmetric": "Practice advances skill; plateau doesn't guide someone already practicing"
-          },
-          "symmetric_pattern": {
-            "description": "skill_component ↔ development_exercise",
-            "example": "Finger independence in guitar ↔ Spider walking exercises",
-            "why_symmetric": "Component explains exercise choice; exercise develops component"
-          },
-          "hard_negative_strategy": {
-            "description": "Same skill domain but different sub-skill",
-            "examples": [
-              "Chess tactics improvement paired with chess opening theory study",
-              "Guitar speed paired with guitar music theory knowledge"
-            ],
-            "why_negative": "Same overall skill but practice doesn't address stated weakness"
-          },
-          "variation_parameters": {
-            "skill_domain": {
-              "values": ["musical_instrument", "sport", "language", "craft", "intellectual_game"],
-              "why_this_varies": "Different learning modalities and progression paths"
-            },
-            "current_level": {
-              "values": ["beginner_fundamentals", "intermediate_consolidation", "advanced_refinement"],
-              "why_this_varies": "Different appropriate practice methods and goals"
-            },
-            "limiting_factor": {
-              "values": ["technical", "strategic", "physical", "mental"],
-              "why_this_varies": "Different intervention approaches"
-            },
-            "practice_structure": {
-              "values": ["deliberate_isolated", "integrated_application", "coached_feedback"],
-              "why_this_varies": "Different learning effectiveness and accessibility"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Include progression milestones"
-        },
-        {
-          "type_id": "process_improvement",
-          "type_description": "Current workflows and efficiency enhancements",
-          "batch_count": 100,
-          "asymmetric_pattern": {
-            "description": "workflow_issue → root_cause → process_redesign",
-            "example": "Email responses take too long → Frequent context switching → Batch process emails at set times",
-            "why_asymmetric": "Redesign fixes issue; issue doesn't guide someone already redesigning"
-          },
-          "symmetric_pattern": {
-            "description": "workflow_characteristic ↔ tool_solution",
-            "example": "Repetitive data entry ↔ Use form automation with validation",
-            "why_symmetric": "Characteristic justifies tool; tool addresses characteristic"
-          },
-          "hard_negative_strategy": {
-            "description": "Same work domain but different process pain point",
-            "examples": [
-              "Time management improvement paired with communication clarity improvement",
-              "Meeting efficiency paired with documentation organization"
-            ],
-            "why_negative": "Same workplace but improvement doesn't address stated issue"
-          },
-          "variation_parameters": {
-            "work_context": {
-              "values": ["individual_productivity", "team_collaboration", "customer_service", "manufacturing", "creative_workflow"],
-              "why_this_varies": "Different process types and stakeholders"
-            },
-            "inefficiency_type": {
-              "values": ["time_waste", "error_prone", "knowledge_loss", "coordination_overhead"],
-              "why_this_varies": "Different improvement strategies"
-            },
-            "improvement_approach": {
-              "values": ["automation", "standardization", "elimination", "reorganization"],
-              "why_this_varies": "Different implementation effort and impact"
-            },
-            "adoption_challenge": {
-              "values": ["individual_habit", "team_coordination", "system_integration", "cultural_change"],
-              "why_this_varies": "Different change management needs"
-            }
-          },
-          "combination_space": 240,
-          "notes": "Consider change management in improvements"
-        }
-      ]
-    },
-    {
-      "domain": "COMPARATIVE_EVALUATION",
-      "domain_description": "Teaches symmetric and asymmetric patterns in comparisons, where evaluation criteria flow bidirectionally but recommendations flow unidirectionally",
-      "batch_allocation": 350,
-      "information_types": [
-        {
-          "type_id": "product_selection",
-          "type_description": "Selection criteria and product recommendations",
-          "batch_count": 150,
-          "asymmetric_pattern": {
-            "description": "requirements → evaluation → specific_recommendation",
-            "example": "Need laptop for video editing → 32GB RAM, GPU priority → Recommend MacBook Pro M3 Max",
-            "why_asymmetric": "Recommendation satisfies requirements; requirements don't derive from recommendation"
-          },
-          "symmetric_pattern": {
-            "description": "product_feature ↔ use_case_fit",
-            "example": "All-day battery life ↔ Ideal for field work without charging access",
-            "why_symmetric": "Feature enables use case; use case necessitates feature"
-          },
-          "hard_negative_strategy": {
-            "description": "Same product category but mismatched priorities",
-            "examples": [
-              "Budget laptop needs paired with gaming laptop recommendations",
-              "Portability priority paired with desktop workstation specs"
-            ],
-            "why_negative": "Same category but recommendation doesn't match stated criteria"
+            "description": "Component specifications that don't guide assembly sequence",
+            "examples": ["Frame is powder-coated steel", "Panel dimensions: 24x36 inches"],
+            "why_negative": "Material facts relevant to domain but useless for step execution"
           },
           "variation_parameters": {
             "product_category": {
-              "values": ["electronics", "appliances", "vehicles", "software", "services"],
-              "why_this_varies": "Different evaluation criteria and longevity"
+              "values": ["furniture", "electronics", "toys", "shelving", "machinery"],
+              "why_this_varies": "Different products have unique structural dependencies"
             },
-            "priority_dimension": {
-              "values": ["performance", "budget", "portability", "durability", "ecosystem"],
-              "why_this_varies": "Different tradeoffs and optimal choices"
+            "fastener_type": {
+              "values": ["screws", "bolts", "snap_fit", "adhesive", "welding"],
+              "why_this_varies": "Different fastening methods create different temporal sequences"
             },
-            "user_expertise": {
-              "values": ["novice_needs_simple", "intermediate_wants_value", "expert_seeks_specific"],
-              "why_this_varies": "Different feature importance and terminology"
+            "component_count": {
+              "values": ["simple_3_parts", "moderate_8_parts", "complex_15_parts"],
+              "why_this_varies": "More components create more potential dependency orderings"
             },
-            "purchase_context": {
-              "values": ["personal", "business", "gift", "educational"],
-              "why_this_varies": "Different decision factors and constraints"
+            "tool_requirement": {
+              "values": ["hand_tools_only", "power_tools_optional", "specialized_tools_required"],
+              "why_this_varies": "Tool availability affects viable assembly sequences"
             }
           },
-          "combination_space": 240,
-          "notes": "Include clear decision rationale"
+          "combination_space": 180,
+          "notes": "Ensure variation in dependency depth (linear vs branching assembly trees)"
         },
         {
-          "type_id": "tradeoff_analysis",
-          "type_description": "Competing objectives and balanced solutions",
-          "batch_count": 100,
+          "type_id": "repair_procedures",
+          "type_description": "Diagnostic and fix sequences where causal understanding drives action",
+          "batch_count": 150,
           "asymmetric_pattern": {
-            "description": "competing_goals → constraint_analysis → compromise_solution",
-            "example": "Want fast delivery and low cost → Shipping speed vs price → Choose 3-day shipping at mid-tier cost",
-            "why_asymmetric": "Solution balances goals; goals don't specify solution"
+            "asymmetry_type": "CAUSAL",
+            "linguistic_principle": "Cause must precede effect - diagnosis enables targeted solution",
+            "structure": "symptom_observation → root_cause_identification → corrective_action",
+            "example": "Faucet drips constantly → Worn rubber washer in valve seat → Replace washer with 1/2-inch neoprene washer",
+            "why_asymmetric": "Solution makes sense only after cause; symptom alone doesn't enable action",
+            "real_world_application": "Home repair, automotive troubleshooting, appliance fixes"
           },
           "symmetric_pattern": {
-            "description": "advantage ↔ disadvantage",
-            "example": "Remote work flexibility ↔ Reduced spontaneous collaboration",
-            "why_symmetric": "Each aspect implies the other in the tradeoff"
+            "structure": "diagnostic_method_A ↔ diagnostic_method_B (alternative ways to identify cause)",
+            "example": "Check for water pooling under sink ↔ Run water and observe valve stem for leaks",
+            "why_symmetric": "Both diagnostic approaches inform each other; provide complementary evidence"
           },
           "hard_negative_strategy": {
-            "description": "Same decision domain but unrelated tradeoff dimensions",
-            "examples": [
-              "Speed vs cost tradeoff paired with quality vs quantity tradeoff",
-              "Security vs convenience paired with customization vs simplicity"
-            ],
-            "why_negative": "Same domain but tradeoffs are independent dimensions"
+            "description": "Related maintenance facts that don't solve the current problem",
+            "examples": ["Faucets should be cleaned monthly", "Chrome finish resists corrosion"],
+            "why_negative": "General maintenance advice that doesn't address specific failure"
           },
           "variation_parameters": {
-            "decision_domain": {
-              "values": ["business_strategy", "personal_lifestyle", "technical_architecture", "policy_design"],
-              "why_this_varies": "Different stakeholders and reversibility"
+            "system_type": {
+              "values": ["plumbing", "electrical", "hvac", "appliance", "structural"],
+              "why_this_varies": "Different systems have different failure modes and causal chains"
             },
-            "tradeoff_type": {
-              "values": ["binary_choice", "spectrum_optimization", "multi_objective", "sequential_decision"],
-              "why_this_varies": "Different decision frameworks applicable"
+            "failure_severity": {
+              "values": ["minor_annoyance", "functionality_impaired", "safety_hazard", "complete_failure"],
+              "why_this_varies": "Severity changes urgency and acceptable diagnostic shortcuts"
             },
-            "information_quality": {
-              "values": ["data_driven", "experience_based", "uncertain_estimate"],
-              "why_this_varies": "Different confidence in tradeoff quantification"
+            "skill_level_required": {
+              "values": ["beginner_diy", "intermediate_homeowner", "experienced_handyman", "professional_only"],
+              "why_this_varies": "Complexity affects diagnostic depth and solution approach"
             },
-            "stakes": {
-              "values": ["low_easily_reversible", "medium_commitment", "high_irreversible"],
-              "why_this_varies": "Different acceptable risk levels"
+            "diagnostic_accessibility": {
+              "values": ["visible_inspection", "requires_disassembly", "needs_testing_equipment"],
+              "why_this_varies": "Access difficulty changes the causal reasoning path"
             }
           },
           "combination_space": 240,
-          "notes": "Acknowledge uncertainty in tradeoff estimates"
+          "notes": "Balance simple cause-effect with multi-step causal chains"
         },
         {
-          "type_id": "alternative_comparison",
-          "type_description": "Multiple options and distinguishing characteristics",
-          "batch_count": 100,
+          "type_id": "emergency_response",
+          "type_description": "Critical procedures where temporal order prevents harm escalation",
+          "batch_count": 150,
           "asymmetric_pattern": {
-            "description": "comparison_request → key_differentiators → selection_guidance",
-            "example": "Python vs JavaScript for web backend → Async model and typing → Python for data-heavy, JS for real-time",
-            "why_asymmetric": "Guidance uses differentiators; differentiators don't imply guidance"
+            "asymmetry_type": "TEMPORAL",
+            "linguistic_principle": "Iconicity - response steps mirror time-critical physical reality",
+            "structure": "immediate_safety_action → stabilization_action → follow_up_action",
+            "example": "Turn off gas valve at meter → Open windows for ventilation → Call gas company from outside the building",
+            "why_asymmetric": "Safety requires specific order; reversing creates danger or wastes critical time",
+            "real_world_application": "First aid, emergency procedures, safety protocols"
           },
           "symmetric_pattern": {
-            "description": "strength_of_option_A ↔ weakness_of_option_B",
-            "example": "SQL's declarative queries ↔ NoSQL's rigid schema requirements",
-            "why_symmetric": "Each highlights the contrast from both perspectives"
+            "structure": "warning_sign_A ↔ warning_sign_B (correlated indicators of same emergency)",
+            "example": "Strong sulfur odor indicates gas leak ↔ Hissing sound near gas lines indicates leak",
+            "why_symmetric": "Both signs help recognize emergency; each validates the other"
           },
           "hard_negative_strategy": {
-            "description": "Comparison in same domain but orthogonal attributes",
-            "examples": [
-              "Performance comparison paired with community ecosystem comparison",
-              "Learning curve comparison paired with enterprise support comparison"
-            ],
-            "why_negative": "Same alternatives but attributes don't address stated comparison"
+            "description": "Safety facts that don't guide immediate emergency response",
+            "examples": ["Natural gas is odorless; mercaptan is added for detection", "Gas explosions cause 15 deaths annually"],
+            "why_negative": "Educational context that doesn't help in time-critical situations"
           },
           "variation_parameters": {
-            "comparison_domain": {
-              "values": ["technology_stack", "service_provider", "methodology", "location", "career_path"],
-              "why_this_varies": "Different comparison dimensions relevant"
+            "emergency_type": {
+              "values": ["fire", "gas_leak", "electrical", "choking", "bleeding", "poisoning"],
+              "why_this_varies": "Different emergencies have completely different response sequences"
             },
-            "number_of_options": {
-              "values": ["binary_two", "small_set_three_to_five", "large_set_many"],
-              "why_this_varies": "Different comparison presentation strategies"
+            "environment": {
+              "values": ["home", "workplace", "vehicle", "public_space", "outdoor"],
+              "why_this_varies": "Environment changes available resources and priority actions"
             },
-            "comparison_basis": {
-              "values": ["objective_metrics", "subjective_fit", "contextual_suitability"],
-              "why_this_varies": "Different types of evidence and reasoning"
+            "victim_status": {
+              "values": ["conscious_mobile", "conscious_immobile", "unconscious_breathing", "not_breathing"],
+              "why_this_varies": "Victim state determines which actions are possible and prioritized"
+            }
+          },
+          "combination_space": 216,
+          "notes": "Emphasize time-criticality to strengthen temporal asymmetry signal"
+        }
+      ]
+    },
+    {
+      "domain": "TROUBLESHOOTING_TECHNICAL",
+      "domain_description": "Problem-diagnosis-solution chains with strong causal asymmetry",
+      "batch_allocation": 450,
+      "information_types": [
+        {
+          "type_id": "software_debugging",
+          "type_description": "Code errors where understanding cause enables targeted fixes",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "CAUSAL",
+            "linguistic_principle": "Cause-effect - root cause must be understood before solution makes sense",
+            "structure": "error_manifestation → underlying_cause → code_fix",
+            "example": "API returns 500 errors intermittently → Database connection pool exhausted under load → Increase pool size from 10 to 50 and add connection timeout",
+            "why_asymmetric": "Fix only makes sense after diagnosis; error alone doesn't reveal what to change",
+            "real_world_application": "Software debugging, log analysis, performance optimization"
+          },
+          "symmetric_pattern": {
+            "structure": "debugging_technique_A ↔ debugging_technique_B (complementary diagnostic methods)",
+            "example": "Add logging statements to trace execution flow ↔ Use debugger breakpoints to inspect state",
+            "why_symmetric": "Both techniques aid diagnosis; each illuminates strengths of the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Code architecture facts that don't solve the specific error",
+            "examples": ["API uses Express.js framework", "Database is PostgreSQL 14"],
+            "why_negative": "Tech stack information relevant to domain but useless for this specific bug"
+          },
+          "variation_parameters": {
+            "error_category": {
+              "values": ["performance", "crash", "data_corruption", "security", "integration"],
+              "why_this_varies": "Different error types have different diagnostic and solution patterns"
             },
-            "decision_reversibility": {
-              "values": ["easily_switched", "moderate_switching_cost", "locked_in"],
-              "why_this_varies": "Different importance of getting it right initially"
+            "system_component": {
+              "values": ["frontend", "backend_api", "database", "cache", "message_queue", "auth"],
+              "why_this_varies": "Component determines relevant diagnostic tools and fix locations"
+            },
+            "trigger_condition": {
+              "values": ["always_fails", "intermittent", "load_dependent", "data_dependent", "timing_race"],
+              "why_this_varies": "Trigger patterns require different causal reasoning approaches"
+            },
+            "investigation_depth": {
+              "values": ["surface_symptom", "immediate_cause", "root_cause", "systemic_issue"],
+              "why_this_varies": "Depth changes the causal chain length and solution scope"
             }
           },
           "combination_space": 240,
-          "notes": "Avoid false dichotomies when multiple options viable"
+          "notes": "Include multi-hop causal chains for complex scenarios"
+        },
+        {
+          "type_id": "network_diagnostics",
+          "type_description": "Connectivity issues where layer-by-layer diagnosis reveals cause",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "CAUSAL",
+            "linguistic_principle": "Causal chain - each diagnostic step reveals deeper cause",
+            "structure": "connectivity_symptom → diagnostic_finding → resolution_action",
+            "example": "Cannot reach website at example.com → DNS lookup fails; /etc/resolv.conf points to wrong nameserver → Update nameserver to 8.8.8.8 in resolv.conf",
+            "why_asymmetric": "Resolution requires knowing what's broken; symptom doesn't indicate fix location",
+            "real_world_application": "Network administration, IT support, DevOps troubleshooting"
+          },
+          "symmetric_pattern": {
+            "structure": "diagnostic_tool_A ↔ diagnostic_tool_B (tools revealing same layer's status)",
+            "example": "Use ping to test IP connectivity ↔ Use traceroute to identify routing path",
+            "why_symmetric": "Both diagnose network layer; results complement each other's findings"
+          },
+          "hard_negative_strategy": {
+            "description": "Network architecture facts that don't diagnose current problem",
+            "examples": ["Network uses VLAN segmentation", "Firewall is Cisco ASA 5500"],
+            "why_negative": "Infrastructure details that don't reveal this specific failure point"
+          },
+          "variation_parameters": {
+            "osi_layer": {
+              "values": ["physical_layer", "data_link", "network_layer", "transport_layer", "application_layer"],
+              "why_this_varies": "Layer determines diagnostic approach and solution type"
+            },
+            "failure_scope": {
+              "values": ["single_host", "subnet", "entire_network", "internet_gateway", "specific_service"],
+              "why_this_varies": "Scope changes diagnostic strategy and likely causes"
+            },
+            "protocol_involved": {
+              "values": ["dns", "dhcp", "tcp", "http", "ssl_tls"],
+              "why_this_varies": "Protocol determines relevant diagnostic commands and config files"
+            },
+            "environment_type": {
+              "values": ["home_network", "enterprise_lan", "cloud_vpc", "hybrid_network"],
+              "why_this_varies": "Environment affects available diagnostic tools and fix permissions"
+            }
+          },
+          "combination_space": 200,
+          "notes": "Vary causal depth from single-cause to multi-layer failures"
+        },
+        {
+          "type_id": "hardware_failure_diagnosis",
+          "type_description": "Physical component failures requiring cause identification before replacement",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "CAUSAL",
+            "linguistic_principle": "Diagnostic causation - symptoms lead to component identification",
+            "structure": "device_malfunction → failed_component_identified → replacement_procedure",
+            "example": "Laptop won't power on → Power supply unit outputs 0V; internal fuse blown → Replace PSU with 65W 19V adapter matching original specs",
+            "why_asymmetric": "Knowing what failed enables targeted replacement; symptom alone could be multiple causes",
+            "real_world_application": "Electronics repair, computer maintenance, appliance servicing"
+          },
+          "symmetric_pattern": {
+            "structure": "test_method_A ↔ test_method_B (alternative ways to confirm component failure)",
+            "example": "Use multimeter to test PSU voltage output ↔ Swap PSU with known-good unit to verify",
+            "why_symmetric": "Both confirm diagnosis; each method validates the other's conclusion"
+          },
+          "hard_negative_strategy": {
+            "description": "Hardware specifications that don't identify failed component",
+            "examples": ["Laptop has Intel Core i5 processor", "Device uses lithium-ion battery"],
+            "why_negative": "Specs relevant to device but don't diagnose which part failed"
+          },
+          "variation_parameters": {
+            "device_category": {
+              "values": ["computer", "smartphone", "printer", "gaming_console", "networking_equipment"],
+              "why_this_varies": "Device type determines component types and failure modes"
+            },
+            "failure_mode": {
+              "values": ["no_power", "intermittent_operation", "performance_degraded", "physical_damage"],
+              "why_this_varies": "Failure type changes diagnostic approach and likely components"
+            },
+            "diagnostic_equipment": {
+              "values": ["visual_inspection", "multimeter_testing", "diagnostic_software", "component_substitution"],
+              "why_this_varies": "Available tools determine how cause is identified"
+            },
+            "repair_complexity": {
+              "values": ["user_replaceable", "requires_disassembly", "soldering_needed", "professional_only"],
+              "why_this_varies": "Complexity affects whether diagnosis leads to user action or referral"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Include cases where multiple symptoms point to single cause"
+        }
+      ]
+    },
+    {
+      "domain": "KNOWLEDGE_EXPLANATION",
+      "domain_description": "Teaching new concepts by anchoring to known information - epistemic asymmetry",
+      "batch_allocation": 600,
+      "information_types": [
+        {
+          "type_id": "technical_concept_teaching",
+          "type_description": "Explaining complex ideas by building from familiar foundations",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "EPISTEMIC",
+            "linguistic_principle": "Given→New - anchor familiar concept before introducing novel information",
+            "structure": "familiar_anchor → new_concept → technical_elaboration",
+            "example": "You know arrays store data in sequential memory → Hash tables store data using computed key positions → They use hash function modulo table size to map keys to indices",
+            "why_asymmetric": "New concept needs familiar foundation; starting with technical detail loses audience",
+            "real_world_application": "Technical documentation, educational content, onboarding materials"
+          },
+          "symmetric_pattern": {
+            "structure": "concept_aspect_A ↔ concept_aspect_B (complementary facets of same concept)",
+            "example": "Hash tables offer O(1) average lookup time ↔ Hash tables trade memory for speed with load factor management",
+            "why_symmetric": "Both illuminate trade-offs; each property helps understand the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Related technical facts that don't build understanding from current foundation",
+            "examples": ["Hash tables were invented in 1953", "Python dict uses hash tables internally"],
+            "why_negative": "Historical or implementation trivia that doesn't teach the concept"
+          },
+          "variation_parameters": {
+            "knowledge_domain": {
+              "values": ["algorithms", "systems_design", "networking", "databases", "security"],
+              "why_this_varies": "Different domains have different familiar anchors and concept structures"
+            },
+            "audience_level": {
+              "values": ["beginner_programmer", "intermediate_developer", "advanced_engineer", "domain_expert"],
+              "why_this_varies": "Audience determines what counts as 'familiar' vs 'new' information"
+            },
+            "explanation_approach": {
+              "values": ["analogy_based", "contrast_with_alternative", "build_from_simple_case", "show_evolution"],
+              "why_this_varies": "Approach changes the epistemic structure of given→new flow"
+            },
+            "abstraction_level": {
+              "values": ["concrete_implementation", "conceptual_model", "mathematical_theory", "practical_pattern"],
+              "why_this_varies": "Abstraction affects how new information relates to anchor"
+            }
+          },
+          "combination_space": 240,
+          "notes": "Ensure variation in what constitutes 'given' knowledge across examples"
+        },
+        {
+          "type_id": "scientific_principle_explanation",
+          "type_description": "Teaching scientific concepts from observable phenomena to theory",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "EPISTEMIC",
+            "linguistic_principle": "Given→New - start with observable experience, build to principle",
+            "structure": "common_observation → underlying_mechanism → theoretical_principle",
+            "example": "Ice floats on water → Water molecules form crystalline structure when frozen, increasing volume → This hydrogen bonding anomaly makes water less dense as solid than liquid",
+            "why_asymmetric": "Abstract principle makes sense after observable anchor; reversing loses intuition",
+            "real_world_application": "Science education, popular science writing, explanatory journalism"
+          },
+          "symmetric_pattern": {
+            "structure": "evidence_type_A ↔ evidence_type_B (different evidence supporting same principle)",
+            "example": "Ice expansion cracks rocks in freeze-thaw cycles ↔ Frozen water pipes burst from pressure buildup",
+            "why_symmetric": "Both demonstrate same principle; each example reinforces the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Related science facts that don't explain the principle being taught",
+            "examples": ["Water covers 71% of Earth's surface", "Ice has been found on Mars"],
+            "why_negative": "Topically related but doesn't build epistemic understanding"
+          },
+          "variation_parameters": {
+            "science_field": {
+              "values": ["physics", "chemistry", "biology", "earth_science", "astronomy"],
+              "why_this_varies": "Field determines types of observations and explanatory frameworks"
+            },
+            "phenomenon_scale": {
+              "values": ["everyday_observable", "requires_instruments", "microscopic", "cosmic"],
+              "why_this_varies": "Scale changes what serves as accessible 'given' information"
+            },
+            "explanation_depth": {
+              "values": ["descriptive_pattern", "mechanistic_how", "theoretical_why", "mathematical_model"],
+              "why_this_varies": "Depth determines how far new information extends from anchor"
+            },
+            "real_world_connection": {
+              "values": ["common_experience", "industrial_application", "natural_phenomenon", "technological_use"],
+              "why_this_varies": "Connection type affects familiarity of the anchor point"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Vary the gap between given and new information"
+        },
+        {
+          "type_id": "business_concept_education",
+          "type_description": "Teaching business frameworks by connecting to familiar contexts",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "EPISTEMIC",
+            "linguistic_principle": "Given→New - relate abstract business concept to concrete experience",
+            "structure": "relatable_scenario → business_framework → strategic_application",
+            "example": "You've chosen restaurants based on reviews and convenience → This is evaluating switching costs and network effects → Businesses use these same factors to analyze competitive moats",
+            "why_asymmetric": "Framework makes sense after concrete grounding; abstract term first is opaque",
+            "real_world_application": "Business education, management training, strategy consulting"
+          },
+          "symmetric_pattern": {
+            "structure": "framework_component_A ↔ framework_component_B (interacting elements)",
+            "example": "High switching costs retain customers longer ↔ Network effects increase value for all users",
+            "why_symmetric": "Both create competitive advantage; each mechanism amplifies the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Business jargon or facts that don't teach the framework",
+            "examples": ["Porter introduced Five Forces in 1979", "Most startups use freemium models"],
+            "why_negative": "Business trivia that doesn't build conceptual understanding"
+          },
+          "variation_parameters": {
+            "business_area": {
+              "values": ["strategy", "marketing", "operations", "finance", "organizational_behavior"],
+              "why_this_varies": "Area determines relevant frameworks and anchor experiences"
+            },
+            "framework_complexity": {
+              "values": ["single_concept", "two_factor_model", "multi_component_framework", "integrated_system"],
+              "why_this_varies": "Complexity changes how much new information builds on given"
+            },
+            "industry_context": {
+              "values": ["consumer_tech", "b2b_services", "manufacturing", "retail", "financial_services"],
+              "why_this_varies": "Industry affects which concrete examples serve as anchors"
+            },
+            "application_level": {
+              "values": ["individual_decision", "team_tactic", "company_strategy", "market_analysis"],
+              "why_this_varies": "Level determines scale of new information being introduced"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Ensure anchors are genuinely familiar across diverse backgrounds"
+        },
+        {
+          "type_id": "historical_context_building",
+          "type_description": "Teaching history by connecting events to familiar narratives",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "EPISTEMIC",
+            "linguistic_principle": "Given→New - anchor to known history before introducing new events",
+            "structure": "familiar_historical_event → new_related_event → causal_connection",
+            "example": "You know the Cold War involved US-Soviet tensions → The Berlin Airlift was a 1948 crisis when Soviets blocked West Berlin → This event crystallized the policy of containment that defined the next 40 years",
+            "why_asymmetric": "New event makes sense within known context; isolated fact lacks meaning",
+            "real_world_application": "History education, documentary narratives, museum exhibits"
+          },
+          "symmetric_pattern": {
+            "structure": "perspective_A ↔ perspective_B (different viewpoints on same event)",
+            "example": "Western powers saw airlift as defending freedom ↔ Soviet Union viewed it as provocative interference in their sphere",
+            "why_symmetric": "Both perspectives illuminate motivations; each clarifies the other's reasoning"
+          },
+          "hard_negative_strategy": {
+            "description": "Historical facts that don't connect to the narrative being built",
+            "examples": ["Berlin's population was 3.3 million in 1948", "Airlift used C-47 aircraft"],
+            "why_negative": "Factual details that don't build epistemic understanding of significance"
+          },
+          "variation_parameters": {
+            "historical_period": {
+              "values": ["ancient", "medieval", "early_modern", "19th_century", "20th_century", "contemporary"],
+              "why_this_varies": "Period determines what events can serve as known anchors"
+            },
+            "geographic_scope": {
+              "values": ["local_regional", "national", "continental", "global"],
+              "why_this_varies": "Scope affects which contexts are familiar vs new"
+            },
+            "narrative_type": {
+              "values": ["political_history", "social_movement", "technological_change", "cultural_shift", "economic_development"],
+              "why_this_varies": "Narrative type changes the framework for connecting events"
+            },
+            "connection_strength": {
+              "values": ["direct_causation", "parallel_development", "contrasting_approach", "long_term_influence"],
+              "why_this_varies": "Connection type affects epistemic relationship between given and new"
+            }
+          },
+          "combination_space": 216,
+          "notes": "Vary familiarity assumptions to test epistemic anchoring"
+        }
+      ]
+    },
+    {
+      "domain": "CONVERSATIONAL_DIALOGUE",
+      "domain_description": "Interactive exchanges with adjacency pair structure - interactional asymmetry",
+      "batch_allocation": 600,
+      "information_types": [
+        {
+          "type_id": "technical_qa_forums",
+          "type_description": "Question-answer pairs where question creates expectation for response",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "INTERACTIONAL",
+            "linguistic_principle": "Adjacency pairs - question creates obligation for answer",
+            "structure": "specific_question → direct_answer → implementation_detail",
+            "example": "How do I prevent SQL injection in Node.js? → Use parameterized queries with prepared statements → Example: db.query('SELECT * FROM users WHERE id = ?', [userId])",
+            "why_asymmetric": "Answer addresses question; question doesn't help someone implementing answer",
+            "real_world_application": "Stack Overflow, support forums, documentation FAQs"
+          },
+          "symmetric_pattern": {
+            "structure": "clarifying_question ↔ clarifying_answer (back-and-forth refinement)",
+            "example": "Are you using PostgreSQL or MySQL? ↔ I'm using PostgreSQL 13 with pg library",
+            "why_symmetric": "Both refine context; each response enables more specific help"
+          },
+          "hard_negative_strategy": {
+            "description": "Related technical information that doesn't answer the question",
+            "examples": ["SQL injection is in OWASP Top 10", "Parameterized queries were introduced in 1990s"],
+            "why_negative": "Background information that doesn't fulfill answer obligation"
+          },
+          "variation_parameters": {
+            "question_type": {
+              "values": ["how_to", "why_does", "what_is_best", "troubleshooting", "comparison"],
+              "why_this_varies": "Question type determines appropriate answer structure"
+            },
+            "technical_domain": {
+              "values": ["web_development", "data_science", "mobile_apps", "devops", "system_design"],
+              "why_this_varies": "Domain changes the knowledge required and answer format"
+            },
+            "specificity_level": {
+              "values": ["general_approach", "specific_tool", "code_example", "complete_solution"],
+              "why_this_varies": "Specificity affects what constitutes adequate answer"
+            },
+            "asker_expertise": {
+              "values": ["complete_beginner", "some_background", "experienced_different_stack", "expert_edge_case"],
+              "why_this_varies": "Expertise level changes what answer detail is needed"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Include multi-turn exchanges to test extended adjacency structure"
+        },
+        {
+          "type_id": "customer_support_interactions",
+          "type_description": "Service requests and responses following interactional norms",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "INTERACTIONAL",
+            "linguistic_principle": "Request-response pairs - request creates expectation for fulfillment",
+            "structure": "customer_request → support_response → confirmation_action",
+            "example": "I need to cancel my subscription → I can help with that. Can you confirm your account email? → Once confirmed, I'll process cancellation effective immediately",
+            "why_asymmetric": "Response addresses request; request doesn't help execute the action",
+            "real_world_application": "Customer service chats, help desk tickets, support calls"
+          },
+          "symmetric_pattern": {
+            "structure": "information_exchange_A ↔ information_exchange_B (mutual information gathering)",
+            "example": "What's your order number? ↔ It's #12345, placed on January 15th",
+            "why_symmetric": "Both pieces needed for resolution; each enables the other's usefulness"
+          },
+          "hard_negative_strategy": {
+            "description": "Company policies that don't address the specific request",
+            "examples": ["We value customer satisfaction", "Our platform has 99.9% uptime"],
+            "why_negative": "Generic statements that don't fulfill interactional obligation"
+          },
+          "variation_parameters": {
+            "request_category": {
+              "values": ["account_modification", "billing_issue", "technical_problem", "product_inquiry", "complaint"],
+              "why_this_varies": "Category determines expected response structure"
+            },
+            "urgency_level": {
+              "values": ["routine_inquiry", "time_sensitive", "service_disrupted", "critical_blocker"],
+              "why_this_varies": "Urgency changes response obligations and priorities"
+            },
+            "resolution_path": {
+              "values": ["immediate_resolution", "requires_investigation", "needs_escalation", "external_dependency"],
+              "why_this_varies": "Path affects how interactional obligation is fulfilled"
+            },
+            "customer_emotion": {
+              "values": ["neutral_transactional", "frustrated", "confused", "appreciative"],
+              "why_this_varies": "Emotion affects interactional dynamics and response approach"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Vary how requests are framed to test obligation recognition"
+        },
+        {
+          "type_id": "advice_seeking_responses",
+          "type_description": "Seeking and providing guidance following conversational norms",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "INTERACTIONAL",
+            "linguistic_principle": "Advice-seeking creates expectation for recommendation",
+            "structure": "situation_description → advice_recommendation → rationale",
+            "example": "I have $10k to invest and I'm 25 years old → Consider low-cost index funds for long-term growth → At your age, you can ride out market volatility for decades of compound growth",
+            "why_asymmetric": "Advice responds to situation; situation doesn't help implement advice",
+            "real_world_application": "Reddit advice forums, mentorship conversations, consulting"
+          },
+          "symmetric_pattern": {
+            "structure": "context_detail_A ↔ context_detail_B (both refine the situation)",
+            "example": "I'm risk-averse and need emergency access ↔ I have stable income and no debt",
+            "why_symmetric": "Both constraints shape advice; each detail refines the other's relevance"
+          },
+          "hard_negative_strategy": {
+            "description": "General wisdom that doesn't address specific situation",
+            "examples": ["Investing carries risk", "Past performance doesn't guarantee future returns"],
+            "why_negative": "Generic disclaimers that don't fulfill advice obligation"
+          },
+          "variation_parameters": {
+            "advice_domain": {
+              "values": ["career", "relationships", "finance", "health", "education", "technology"],
+              "why_this_varies": "Domain determines relevant advice frameworks"
+            },
+            "situation_complexity": {
+              "values": ["straightforward_decision", "multiple_constraints", "conflicting_priorities", "uncertain_factors"],
+              "why_this_varies": "Complexity affects what constitutes adequate advice response"
+            },
+            "advice_style": {
+              "values": ["directive_prescription", "options_presentation", "framework_guidance", "question_reflection"],
+              "why_this_varies": "Style changes how interactional obligation is satisfied"
+            },
+            "follow_up_depth": {
+              "values": ["initial_response_only", "one_clarification", "extended_dialogue"],
+              "why_this_varies": "Depth tests multi-turn interactional structure"
+            }
+          },
+          "combination_space": 216,
+          "notes": "Balance directive vs exploratory advice patterns"
+        },
+        {
+          "type_id": "scheduling_coordination",
+          "type_description": "Proposal-response pairs for arranging meetings and events",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "INTERACTIONAL",
+            "linguistic_principle": "Proposal creates expectation for acceptance/counter-proposal",
+            "structure": "scheduling_proposal → response_to_proposal → confirmation_detail",
+            "example": "Can we meet Tuesday at 2pm to discuss the project? → Tuesday works, but I'm free after 3pm → Perfect, I'll send a 3pm calendar invite for Conference Room B",
+            "why_asymmetric": "Response addresses proposal; proposal doesn't contain logistics details",
+            "real_world_application": "Email coordination, calendar scheduling, meeting planning"
+          },
+          "symmetric_pattern": {
+            "structure": "constraint_A ↔ constraint_B (both parties share availability)",
+            "example": "I'm available Monday through Wednesday ↔ I can do Tuesday or Wednesday afternoons",
+            "why_symmetric": "Both constraints needed for resolution; each narrows viable options"
+          },
+          "hard_negative_strategy": {
+            "description": "Meeting context that doesn't address scheduling logistics",
+            "examples": ["This project is high priority", "We should invite the design team"],
+            "why_negative": "Topically related but doesn't fulfill proposal-response obligation"
+          },
+          "variation_parameters": {
+            "coordination_complexity": {
+              "values": ["two_person_simple", "small_group", "large_meeting", "multi_party_dependencies"],
+              "why_this_varies": "Complexity changes the interactional structure of proposals"
+            },
+            "urgency_timeframe": {
+              "values": ["same_day", "this_week", "next_few_weeks", "flexible_timing"],
+              "why_this_varies": "Timeframe affects what constitutes adequate response"
+            },
+            "constraint_type": {
+              "values": ["time_availability", "location_preference", "attendee_requirements", "resource_booking"],
+              "why_this_varies": "Constraint type changes what proposals and responses must address"
+            },
+            "formality_level": {
+              "values": ["casual_colleague", "professional_formal", "client_facing", "executive_level"],
+              "why_this_varies": "Formality affects interactional norms and response expectations"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Include counter-proposals to test extended adjacency sequences"
+        }
+      ]
+    },
+    {
+      "domain": "CLASSIFICATION_TAXONOMY",
+      "domain_description": "Categorization with semantic entailment - specific implies general but not reverse",
+      "batch_allocation": 600,
+      "information_types": [
+        {
+          "type_id": "error_categorization",
+          "type_description": "Specific errors entailing general categories with system implications",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "SEMANTIC",
+            "linguistic_principle": "Entailment - specific instance implies general category, not vice versa",
+            "structure": "specific_error_code → general_error_category → system_impact",
+            "example": "ECONNREFUSED on port 5432 → Database connection failure → All data-dependent endpoints will return 503 errors",
+            "why_asymmetric": "Specific error entails general failure; general category doesn't specify which error",
+            "real_world_application": "Error handling systems, logging infrastructure, monitoring dashboards"
+          },
+          "symmetric_pattern": {
+            "structure": "error_indicator_A ↔ error_indicator_B (correlated symptoms of same root issue)",
+            "example": "Connection timeout after 30 seconds ↔ No TCP handshake completion logged",
+            "why_symmetric": "Both indicate same underlying issue; each validates the other's diagnosis"
+          },
+          "hard_negative_strategy": {
+            "description": "Error information that doesn't reveal category or impact",
+            "examples": ["Error occurred at 14:23:45 UTC", "PostgreSQL version is 13.2"],
+            "why_negative": "Contextual details that don't enable semantic categorization"
+          },
+          "variation_parameters": {
+            "error_domain": {
+              "values": ["network_errors", "database_errors", "file_system_errors", "authentication_errors", "resource_errors"],
+              "why_this_varies": "Domain determines the taxonomy structure and entailment relationships"
+            },
+            "specificity_level": {
+              "values": ["precise_error_code", "component_level", "subsystem_level", "system_wide"],
+              "why_this_varies": "Specificity determines strength of entailment relationship"
+            },
+            "impact_scope": {
+              "values": ["single_operation", "user_session", "service_component", "entire_system"],
+              "why_this_varies": "Scope changes what the general category implies"
+            },
+            "diagnostic_certainty": {
+              "values": ["definitive_failure", "likely_cause", "possible_contributor", "correlated_event"],
+              "why_this_varies": "Certainty affects semantic relationship strength"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Emphasize one-way entailment from specific to general"
+        },
+        {
+          "type_id": "product_taxonomy",
+          "type_description": "Specific products belonging to general categories with attribute inheritance",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "SEMANTIC",
+            "linguistic_principle": "Hyponymy - specific item inherits properties of general category",
+            "structure": "specific_product → product_category → category_attribute",
+            "example": "MacBook Air M2 → Laptop computer → Requires charging, portable computing device",
+            "why_asymmetric": "Specific product IS-A laptop; laptop category doesn't specify which product",
+            "real_world_application": "E-commerce categorization, inventory systems, search filtering"
+          },
+          "symmetric_pattern": {
+            "structure": "product_feature_A ↔ product_feature_B (complementary attributes)",
+            "example": "Has 13-inch Retina display ↔ Weighs 2.7 pounds for portability",
+            "why_symmetric": "Both features describe the product; each attribute complements the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Product facts that don't establish categorical relationships",
+            "examples": ["Released in June 2022", "Available in four colors"],
+            "why_negative": "Product details that don't reveal taxonomic position or inherited attributes"
+          },
+          "variation_parameters": {
+            "product_domain": {
+              "values": ["electronics", "clothing", "furniture", "food_items", "tools"],
+              "why_this_varies": "Domain determines relevant taxonomic hierarchies"
+            },
+            "taxonomy_depth": {
+              "values": ["broad_category", "subcategory", "specific_type", "exact_model"],
+              "why_this_varies": "Depth changes the entailment chain length"
+            },
+            "attribute_type": {
+              "values": ["functional_property", "physical_characteristic", "usage_context", "technical_spec"],
+              "why_this_varies": "Attribute type affects what's inherited from category"
+            },
+            "categorization_basis": {
+              "values": ["function_based", "material_based", "use_case_based", "form_factor_based"],
+              "why_this_varies": "Basis determines which attributes are category-level vs instance-level"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Vary taxonomy depth to test multi-level entailment"
+        },
+        {
+          "type_id": "medical_diagnosis_hierarchy",
+          "type_description": "Specific conditions as instances of general diagnostic categories",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "SEMANTIC",
+            "linguistic_principle": "Taxonomic entailment - specific diagnosis implies general condition class",
+            "structure": "specific_diagnosis → condition_category → treatment_class",
+            "example": "Type 2 diabetes mellitus → Metabolic disorder → Requires lifestyle modification and possible medication management",
+            "why_asymmetric": "Specific diagnosis entails metabolic disorder; category doesn't specify diabetes",
+            "real_world_application": "Medical coding, clinical decision support, health records"
+          },
+          "symmetric_pattern": {
+            "structure": "symptom_A ↔ symptom_B (co-occurring indicators of condition)",
+            "example": "Elevated fasting blood glucose levels ↔ Increased thirst and urination",
+            "why_symmetric": "Both symptoms indicate condition; each finding supports the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Medical facts that don't establish diagnostic hierarchy",
+            "examples": ["Affects 10% of US adults", "First described in ancient Egypt"],
+            "why_negative": "Epidemiological or historical info that doesn't reveal categorical relationship"
+          },
+          "variation_parameters": {
+            "medical_system": {
+              "values": ["endocrine", "cardiovascular", "respiratory", "neurological", "musculoskeletal"],
+              "why_this_varies": "Body system determines diagnostic taxonomy structure"
+            },
+            "condition_severity": {
+              "values": ["acute", "chronic", "progressive", "reversible"],
+              "why_this_varies": "Severity affects categorization and treatment implications"
+            },
+            "diagnostic_certainty": {
+              "values": ["confirmed_diagnosis", "probable", "differential", "rule_out"],
+              "why_this_varies": "Certainty affects strength of category membership"
+            },
+            "classification_system": {
+              "values": ["icd_symptom_based", "pathophysiology_based", "anatomical", "etiological"],
+              "why_this_varies": "System determines which taxonomic relationships exist"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Ensure examples show genuine medical entailment, not just association"
+        },
+        {
+          "type_id": "legal_case_precedent",
+          "type_description": "Specific rulings as instances of general legal principles",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "SEMANTIC",
+            "linguistic_principle": "Legal entailment - specific case exemplifies general principle",
+            "structure": "specific_case_ruling → general_legal_principle → application_scope",
+            "example": "Miranda v. Arizona (1966) → Fifth Amendment protection against self-incrimination → Police must inform suspects of rights before custodial interrogation",
+            "why_asymmetric": "Specific case establishes principle; principle doesn't uniquely identify case",
+            "real_world_application": "Legal research, case law databases, judicial reasoning"
+          },
+          "symmetric_pattern": {
+            "structure": "case_element_A ↔ case_element_B (mutually reinforcing precedents)",
+            "example": "Right to remain silent ↔ Right to attorney before questioning",
+            "why_symmetric": "Both rights work together; each clarifies scope of the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Legal facts that don't establish principle-case relationship",
+            "examples": ["Case heard by Warren Court", "5-4 decision split"],
+            "why_negative": "Procedural details that don't reveal doctrinal categorization"
+          },
+          "variation_parameters": {
+            "legal_domain": {
+              "values": ["constitutional_law", "contract_law", "tort_law", "criminal_law", "administrative_law"],
+              "why_this_varies": "Domain determines relevant doctrinal hierarchies"
+            },
+            "precedent_strength": {
+              "values": ["binding_precedent", "persuasive_authority", "distinguishable", "overruled"],
+              "why_this_varies": "Strength affects entailment relationship to principle"
+            },
+            "principle_abstraction": {
+              "values": ["narrow_holding", "intermediate_rule", "broad_doctrine", "fundamental_right"],
+              "why_this_varies": "Abstraction level changes taxonomic position"
+            },
+            "jurisdiction_scope": {
+              "values": ["federal_supreme", "circuit_level", "state_supreme", "trial_court"],
+              "why_this_varies": "Jurisdiction affects which principles cases can establish"
+            }
+          },
+          "combination_space": 192,
+          "notes": "Show clear semantic entailment from case to principle"
+        }
+      ]
+    },
+    {
+      "domain": "NARRATIVE_DISCOURSE",
+      "domain_description": "Story and explanation structures with multiple asymmetry types in natural flow",
+      "batch_allocation": 150,
+      "information_types": [
+        {
+          "type_id": "story_chronology",
+          "type_description": "Narrative events where temporal sequence creates coherent story",
+          "batch_count": 150,
+          "asymmetric_pattern": {
+            "asymmetry_type": "TEMPORAL",
+            "linguistic_principle": "Narrative iconicity - story order reflects chronological event sequence",
+            "structure": "initial_event → consequent_event → outcome",
+            "example": "She submitted her resume on Monday → The hiring manager called her on Wednesday → She started the new job two weeks later",
+            "why_asymmetric": "Events follow causal time order; reversing breaks narrative coherence",
+            "real_world_application": "News articles, case studies, historical accounts, storytelling"
+          },
+          "symmetric_pattern": {
+            "structure": "parallel_event_A ↔ parallel_event_B (simultaneous developments)",
+            "example": "She prepared for the interview by researching the company ↔ She practiced answering common interview questions",
+            "why_symmetric": "Both preparations happened concurrently; each activity complements the other"
+          },
+          "hard_negative_strategy": {
+            "description": "Background details that don't advance narrative timeline",
+            "examples": ["The company was founded in 2010", "She had been job hunting for three months"],
+            "why_negative": "Contextual information that doesn't create temporal progression"
+          },
+          "variation_parameters": {
+            "narrative_genre": {
+              "values": ["personal_journey", "business_event", "historical_account", "investigative_story", "process_narrative"],
+              "why_this_varies": "Genre determines typical event sequences and causal structures"
+            },
+            "time_scale": {
+              "values": ["hours", "days", "weeks", "months", "years"],
+              "why_this_varies": "Scale affects granularity of temporal relationships"
+            },
+            "event_density": {
+              "values": ["sparse_key_events", "moderate_detail", "dense_play_by_play"],
+              "why_this_varies": "Density changes how tightly events are causally linked"
+            },
+            "narrative_perspective": {
+              "values": ["first_person", "third_person_limited", "third_person_omniscient", "journalistic_objective"],
+              "why_this_varies": "Perspective affects what temporal information is available"
+            },
+            "causal_complexity": {
+              "values": ["linear_sequence", "branching_outcomes", "converging_threads", "cyclical_pattern"],
+              "why_this_varies": "Complexity determines temporal-causal structure"
+            }
+          },
+          "combination_space": 300,
+          "notes": "Vary event causality from simple sequence to complex temporal structures"
         }
       ]
     }
   ],
   "validation": {
     "total_batches": 3000,
-    "total_domains": 7,
-    "total_information_types": 25,
+    "total_domains": 6,
+    "total_information_types": 20,
+    "asymmetry_type_distribution": {
+      "TEMPORAL": 600,
+      "CAUSAL": 600,
+      "EPISTEMIC": 600,
+      "INTERACTIONAL": 600,
+      "SEMANTIC": 600
+    },
     "batch_distribution": {
       "asymmetric_focused": 1800,
       "symmetric_focused": 900,
@@ -1003,36 +921,38 @@ Topics = {
     }
   },
   "coverage_rationale": {
-    "asymmetric_patterns": [
-      "Problem→Solution (troubleshooting)",
-      "Goal→Method (procedural)",
-      "Cause→Effect (causal)",
-      "Question→Answer (conversational)",
-      "Baseline→Improvement (optimization)",
-      "Requirements→Recommendation (comparative)",
-      "Ambiguous→Clarified (dialogue)",
-      "Abstract→Concrete (conceptual)"
-    ],
+    "asymmetric_patterns": "All 5 linguistic asymmetry types equally represented with 600 batches each. TEMPORAL (600): recipe_execution (150), assembly_instructions (150), emergency_response (150), story_chronology (150). CAUSAL (600): repair_procedures (150), software_debugging (150), network_diagnostics (150), hardware_failure_diagnosis (150). EPISTEMIC (600): technical_concept_teaching (150), scientific_principle_explanation (150), business_concept_education (150), historical_context_building (150). INTERACTIONAL (600): technical_qa_forums (150), customer_support_interactions (150), advice_seeking_responses (150), scheduling_coordination (150). SEMANTIC (600): error_categorization (150), product_taxonomy (150), medical_diagnosis_hierarchy (150), legal_case_precedent (150).",
     "symmetric_patterns": [
-      "Theory↔Example (conceptual)",
-      "Definition↔Property (definitional)",
-      "Constraint↔Mitigation (strategic)",
-      "Feature↔UseCase (functional)",
-      "Advantage↔Disadvantage (tradeoff)",
-      "Cause↔Prevention (bidirectional)",
-      "Norm↔Behavior (social)",
-      "Component↔NetworkEffect (systemic)"
+      "Complementary techniques (alternative methods for same goal)",
+      "Mutual diagnostic methods (different ways to confirm same finding)",
+      "Concept facets (complementary properties of same idea)",
+      "Information exchanges (back-and-forth context building)",
+      "Correlated indicators (co-occurring evidence)",
+      "Parallel events (simultaneous developments)",
+      "Complementary attributes (mutually reinforcing features)"
     ],
     "hard_negative_types": [
-      "Same domain, different subsystem",
-      "Same keywords, wrong relationship type",
-      "Same context, orthogonal concern",
-      "Surface similarity, no structural mapping",
-      "Same entity, independent attributes",
-      "Related field, unconnected principles",
-      "Same lifecycle, different phase",
-      "Shared vocabulary, distinct mechanisms"
+      "Domain facts without procedural value",
+      "Specifications without assembly guidance",
+      "Maintenance advice not solving specific problem",
+      "Safety context not guiding emergency action",
+      "Tech stack details not fixing specific bug",
+      "Architecture facts not diagnosing problem",
+      "Component specs not identifying failure",
+      "Historical trivia not teaching concept",
+      "Science facts not explaining principle",
+      "Business jargon not building framework",
+      "Historical facts not connecting narrative",
+      "Background info not fulfilling answer obligation",
+      "Generic statements not addressing request",
+      "General wisdom not addressing situation",
+      "Meeting context not addressing logistics",
+      "Error context not enabling categorization",
+      "Product details not revealing taxonomy",
+      "Epidemiological info not showing hierarchy",
+      "Procedural details not establishing principle",
+      "Background details not advancing timeline"
     ],
-    "why_complete": "This curriculum systematically covers the spectrum of directional information gain relationships. It balances concrete troubleshooting domains (where problem→solution asymmetry is clear) with abstract conceptual domains (where theory↔example symmetry is evident). The 3000 batches span practical scenarios (home repair, cooking, device troubleshooting), professional contexts (software debugging, project planning, medical diagnosis), theoretical understanding (physics, economics, psychology), and everyday communication (Q&A, advice, clarification). Each domain contributes unique patterns: troubleshooting teaches problem-solution asymmetry, procedural knowledge teaches goal-method flow, conceptual knowledge teaches mutual reinforcement, causation teaches mechanism-outcome directionality, conversation teaches request-response pragmatics, optimization teaches baseline-improvement gain, and comparison teaches both symmetric tradeoffs and asymmetric recommendations. The hard negatives systematically test that the model learns functional relevance rather than keyword matching, ensuring it distinguishes between topical similarity and actual information gain. The variation parameters create genuine diversity within each information type by varying functional dimensions (error types, skill levels, system scales, decision stakes) rather than superficial attributes, ensuring each batch provides distinct learning signal about when and how information adds directional value."
+    "why_complete": "This curriculum comprehensively teaches directional information gain by grounding training in the 5 fundamental linguistic asymmetry types that govern how information flows in natural language. Each asymmetry type receives exactly 600 batches (equal 20% distribution) across diverse domains. TEMPORAL asymmetry (iconicity) is taught through procedures, assembly, emergencies, and narratives. CAUSAL asymmetry (explanation) through troubleshooting and repair across software, network, and hardware. EPISTEMIC asymmetry (given→new) through teaching in technical, scientific, business, and historical contexts. INTERACTIONAL asymmetry (adjacency pairs) through Q&A, support, advice, and coordination dialogues. SEMANTIC asymmetry (entailment) through error, product, medical, and legal taxonomies. The curriculum balances concrete domains (cooking, repairs) with abstract ones (concepts, principles), professional contexts (technical, medical, legal) with everyday ones (conversation, advice, stories). Hard negatives systematically test keyword overlap without functional value across all patterns. 3000 batches ensure the model learns that information gain is directional, context-dependent, and rooted in how language actually structures meaning transfer."
   }
 }

@@ -4,7 +4,7 @@ import math
 import hashlib
 import json
 
-from training_topics import Topics
+from training_topics import TOPICS
 
 final_arr = []
 
@@ -19,7 +19,7 @@ def generate_variation_id(domain_idx, type_idx, params_tuple):
 
 
 # OUTER LAYER LOOP (Domains)
-for d_idx, topic in enumerate(Topics['curriculum']):
+for d_idx, topic in enumerate(TOPICS['curriculum']):
     domain = topic['domain']
     
     # INNER LAYER LOOP (Information Types)
@@ -41,14 +41,9 @@ for d_idx, topic in enumerate(Topics['curriculum']):
         all_combinations = list(itertools.product(
             *variation_parameters.values()
         ))
-
-        # 3. Calculate Limit
-        max_combinations = math.prod(len(v) for v in variation_parameters.values())
-        if max_combinations > 400:
-            max_combinations = 400
         
         # 4. Random Sample
-        sample_size = min(len(all_combinations), max_combinations)
+        sample_size = min(len(all_combinations), information_type['combination_space'])
         selected_tuples = random.sample(all_combinations, sample_size)
         
         # 5. Assign IDs to Variations
