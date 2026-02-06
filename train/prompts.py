@@ -279,7 +279,7 @@ You are generating a single training batch for a directional information gain mo
 
 BATCH METADATA:
 - Domain: {domain}
-- Information Type: {type_id}
+- Information Type: {information_type}
 
 VARIATION PARAMETERS:
 {parameters}
@@ -358,7 +358,7 @@ OUTPUT FORMAT:
 
 Return ONLY valid JSON:
 
-{
+{{
   "asymmetric": [
     "First sentence in the chain",
     "Second sentence in the chain",
@@ -372,22 +372,22 @@ Return ONLY valid JSON:
     "First hard negative sentence",
     "Second hard negative sentence"
   ],
-  "scores": {
-    "asymmetric_forward": {
-      "0_to_1": score here,
-      "1_to_2": score here
-    },
-    "asymmetric_backward": {
-      "1_to_0": score here,
-      "2_to_1": score here,
-      "2_to_0": score here
-    },
-    "symmetric_bidirectional": {
-      "0_to_1": score here,
-      "1_to_0": score here
-    }
-  }
-}
+  "scores": {{
+    "asymmetric_forward": {{
+      "zero_to_one": score here,
+      "one_to_two": score here
+    }},
+    "asymmetric_backward": {{
+      "one_to_zero": score here,
+      "two_to_one": score here,
+      "two_to_zero": score here
+    }},
+    "symmetric_bidirectional": {{
+      "zero_to_one": score here,
+      "one_to_zero": score here
+    }}
+  }}
+}}
 
 Now generate your batch using the provided metadata and parameters.
 """
