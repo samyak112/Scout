@@ -320,7 +320,6 @@ Follow the hard negative strategy above. Create 2 sentences that:
 - Add ZERO functional value to any other sentence
 - Look topically related but are informationally useless
 
----
 
 CRITICAL REQUIREMENTS:
 
@@ -331,6 +330,27 @@ CRITICAL REQUIREMENTS:
    - Backward (2→1→0): Reader gains little to no actionable value
 4. **Symmetric mutuality**: Both directions must provide genuine insight
 5. **Hard negative authenticity**: Must truly share domain but help nothing
+6. Do not make longer sentences keep them one liners.
+
+SCORING GUIDE:
+
+For asymmetric chains, provide directional scores:
+- **Forward scores** (0→1, 1→2): How much does the next sentence add functional value? (0.0 to 1.0)
+  - 0.9-1.0: Essential next step, enables action
+  - 0.7-0.8: Very helpful, strong functional connection
+  - 0.5-0.6: Moderately helpful
+  - 0.3-0.4: Some context, limited action
+  - 0.0-0.2: Minimal to no functional value
+
+- **Backward scores** (2→1, 1→0, 2→0): How much does the previous sentence add value when you already know the later one? (0.0 to 1.0)
+  - For strong asymmetry: 0.1-0.3 (just context, doesn't enable action)
+  - For moderate asymmetry: 0.4-0.5 (some value in understanding)
+
+For symmetric pairs:
+- **Bidirectional scores** (both directions): Should be high and roughly equal (0.7-0.9)
+
+For hard negatives:
+- All scores involving hard negatives should be 0.0
 
 ---
 
@@ -351,7 +371,22 @@ Return ONLY valid JSON:
   "hard_negatives": [
     "First hard negative sentence",
     "Second hard negative sentence"
-  ]
+  ],
+  "scores": {
+    "asymmetric_forward": {
+      "0_to_1": score here,
+      "1_to_2": score here
+    },
+    "asymmetric_backward": {
+      "1_to_0": score here,
+      "2_to_1": score here,
+      "2_to_0": score here
+    },
+    "symmetric_bidirectional": {
+      "0_to_1": score here,
+      "1_to_0": score here
+    }
+  }
 }
 
 Now generate your batch using the provided metadata and parameters.
