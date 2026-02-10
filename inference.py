@@ -76,15 +76,7 @@ def run_inference(model, sentence_embeddings):
 if __name__ == "__main__":
 
     # Example sentences
-    sentences = [
-    "Liam submitted his research paper to the conference.",          # 0
-    "The submission deadline was extended by one week.",             # 1  (hard negative – same topic)
-    "He received reviewer comments two months later.",               # 2  → depends on 0
-    "The paper was accepted after revisions.",                       # 3  → depends on 0, 2
-    "The conference will be held in Vienna this year.",              # 4  (hard negative – same topic)
-    "The reviewers requested additional experiments.",               # 5  ↔ symmetric with 2
-    "Those experiments addressed the reviewers’ concerns."           # 6  ↔ symmetric with 5
-]
+    sentences = ["The living area's HVAC isn't blowing cold air, even on the moderate setting.", "The refrigerant line in the HVAC system is likely leaking due to environmental corrosion.", "A licensed HVAC technician should inspect and recharge the refrigerant line soon to prevent further damage.", "Cleaning HVAC air filters monthly prevents restricted airflow and potential overheating.", "Dirty HVAC air filters restrict airflow, causing the system to work harder and potentially overheat the living area.", "Dusting the living area furniture makes it look nicer.", "Environmental awareness involves reducing waste and conserving energy."]
 
 
 

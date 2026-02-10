@@ -80,7 +80,7 @@ class SigmoidAttentionLayer(nn.Module):
 
         # used Sigmoid instead of Softmax, because I didnt wanted sum = 1 for a row , Now every cell is 0.0 to 1.0 independently.
         attn_probs = torch.sigmoid(raw_scores)
-        attn_output = (attn_probs @ v)
+        attn_output = (attn_probs @ v) / (n ** 0.5) # Soft scaling factor
                 
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, n, self.d_model)
         x = x + self.dropout(self.out_proj(attn_output))
@@ -110,4 +110,5 @@ class Scout(nn.Module):
 
         # returning attention matrix as output
         
-        return  self.aggregator(all_raw_scores)
+        output = self.aggregator(all_raw_scores)
+        return torch.sigmoid(output)  # ← CRITICAL: Bound output to [0, 1]

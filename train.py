@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sentence_transformers import SentenceTransformer
 import torch.nn.functional as F
-
+import random
 import json
 from main import Scout
 import os
@@ -15,6 +15,21 @@ print(f"Using device: {device}")
 if device.type == 'cuda':
     print(f"GPU: {torch.cuda.get_device_name(0)}")
     print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+
+class WeightedMSELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, pred, target):
+        # Weight matrix based on target values
+        weights = torch.ones_like(target)
+        weights = torch.where(target < 0.1, torch.tensor(0.3, device=target.device), weights)  # Low weight for zeros
+        weights = torch.where(target > 0.5, torch.tensor(5.0, device=target.device), weights)  # HIGH weight for strong
+        
+        squared_error = (pred - target) ** 2
+        weighted_loss = (squared_error * weights).mean()
+        
+        return weighted_loss
 
 
 def analyze_multiscale_aggregator(model):
@@ -140,21 +155,24 @@ def load_and_encode_dataset(
         )
 
     # -------- rebuild per-sample tensors --------
-    processed_batches = []
+    processed_samples = []
     offset = 0
 
     for obj, n in zip(samples, sentence_counts):
-        emb = all_embeddings[offset:offset + n].unsqueeze(0)  # [1, N, 768]
+        emb = all_embeddings[offset:offset + n]   # [N, 768]
+
         tgt = torch.tensor(
             obj["target"],
             device=device,
             dtype=torch.float32
-        ).unsqueeze(0)  # [1, N, N]
+        )  # [N, N]
 
-        processed_batches.append((emb, tgt))
+        processed_samples.append((emb, tgt))
         offset += n
 
-    return processed_batches
+    random.shuffle(processed_samples)
+
+    return processed_samples
 
 def train_full_dataset():
     sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
@@ -166,35 +184,42 @@ def train_full_dataset():
     
     optimizer = optim.AdamW(model.parameters(), lr=1e-4) 
 
-    criterion = nn.MSELoss()
+    criterion = WeightedMSELoss()
+
     processed_batches = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
+
+    batch_size = 16 
 
     epoch = 0
     best_loss = float('inf')
-    patience = 20  # Stop if no improvement for 20 epochs
+    patience = 8 
     patience_counter = 0
-    min_delta = 1e-6  # Minimum improvement to count as progress
+    min_delta = 1e-6 
     while True:
         epoch += 1
         total_loss = 0
+
+        random.shuffle(processed_batches)  # shuffle samples each epoch
         
-        for embeddings, target in processed_batches:
+        for i in range(0, len(processed_batches), batch_size):
+            batch = processed_batches[i:i + batch_size]
+
+            embeddings = torch.stack([x[0] for x in batch])  # [B, N, 768]
+            target = torch.stack([x[1] for x in batch])      # [B, N, N]
+
             # shuffling data set so that model doesnt learn positional patterns even after removing PE
-            N = embeddings.shape[1] # 7 sentences
-            
-            # 1. Generate random permutation (e.g., [5, 0, 13, 2...])
-            idx = torch.randperm(N,device=device)
-            
-            # 2. Shuffle Embeddings (Reorder the sequence dim)
-            shuffled_emb = embeddings[:, idx, :] 
-            
-            # 3. Shuffle Target (Must reorder BOTH rows and columns to match)
-            # Reorder Rows (dim 1)
-            shuffled_tgt = target[:, idx, :]
-            # Reorder Cols (dim 2)
-            shuffled_tgt = shuffled_tgt[:, :, idx]
-            
-            # 4. Train on SHUFFLED data
+            N = embeddings.shape[1]  # 7 sentences
+
+            shuffled_emb = embeddings.clone()
+            shuffled_tgt = target.clone()
+
+            for b in range(embeddings.shape[0]):  # loop over batch
+                idx = torch.randperm(N, device=device)
+
+                shuffled_emb[b] = embeddings[b, idx, :]
+                shuffled_tgt[b] = target[b, idx][:, idx]
+
+
             optimizer.zero_grad()
             output_matrix = model(shuffled_emb)
 
