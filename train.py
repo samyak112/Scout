@@ -6,6 +6,15 @@ import torch.nn.functional as F
 
 import json
 from main import Scout
+import os
+os.makedirs('checkpoints', exist_ok=True)
+
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Using device: {device}")
+if device.type == 'cuda':
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
 
 
 def analyze_multiscale_aggregator(model):
@@ -98,8 +107,10 @@ def analyze_multiscale_aggregator(model):
 
 def train_full_dataset():
     sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
+    sbert = sbert.to(device)
 
     model = Scout(d_model=768, nhead=12, num_layers=6)
+    model = model.to(device) 
     model.train()
     
     optimizer = optim.AdamW(model.parameters(), lr=1e-4) 
@@ -110,9 +121,9 @@ def train_full_dataset():
     with open("train_utils/dataset.jsonl", "r") as f:
         for line in f:
             obj = json.loads(line)
-            emb = sbert.encode(obj['sentences'], convert_to_tensor=True).clone()
+            emb = sbert.encode(obj['sentences'], convert_to_tensor=True,device=device).clone()
             emb = emb.unsqueeze(0) # [1, N, 768]
-            tgt = torch.tensor(obj['target']).float().unsqueeze(0) # [1, N, N]
+            tgt = torch.tensor(obj['target'],device=device).float().unsqueeze(0) # [1, N, N]
             processed_batches.append((emb, tgt))
 
     epoch = 0
@@ -125,7 +136,7 @@ def train_full_dataset():
             N = embeddings.shape[1] # 7 sentences
             
             # 1. Generate random permutation (e.g., [5, 0, 13, 2...])
-            idx = torch.randperm(N)
+            idx = torch.randperm(N,device=device)
             
             # 2. Shuffle Embeddings (Reorder the sequence dim)
             shuffled_emb = embeddings[:, idx, :] 
@@ -146,6 +157,8 @@ def train_full_dataset():
             optimizer.step()
 
             total_loss += loss.item()
+
+        print(f'Epoch Number - {epoch}')
         
         avg_loss = total_loss / len(processed_batches)
         
@@ -161,33 +174,48 @@ def train_full_dataset():
             print("Stopped at 2000.")
             break
 
+        # Save final model
+    final_checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': avg_loss,
+        'model_config': {
+            'd_model': 768,
+            'nhead': 12,
+            'num_layers': 6
+        }
+    }
+    torch.save(final_checkpoint, 'checkpoints/scout.pt')
+    print("\n✓ model saved: scout.pt")
+
     print("\n--- FINAL ROBUSTNESS TEST ---")
     model.eval() 
     analyze_multiscale_aggregator(model)
 
     
-    # We take the first batch and shuffle it ONE LAST TIME to prove it works
-    emb, tgt = processed_batches[0]
-    idx = torch.randperm(7)
+    # # We take the first batch and shuffle it ONE LAST TIME to prove it works
+    # emb, tgt = processed_batches[0]
+    # idx = torch.randperm(7)
     
-    test_emb = emb[:, idx, :]
-    test_tgt = tgt[:, idx, :][:, :, idx]
+    # test_emb = emb[:, idx, :]
+    # test_tgt = tgt[:, idx, :][:, :, idx]
     
-    print(f"Random Shuffle Order: {idx.tolist()}")
+    # print(f"Random Shuffle Order: {idx.tolist()}")
     
-    with torch.no_grad():
-        preds = model(test_emb)
+    # with torch.no_grad():
+    #     preds = model(test_emb)
         
     
-    print("\nTarget (First 5x5 of Shuffled Matrix):")
-    print((test_tgt[0, :5, :5] > 0.5).numpy())
+    # print("\nTarget (First 5x5 of Shuffled Matrix):")
+    # print((test_tgt[0, :5, :5] > 0.5).numpy())
     
-    print("\nPrediction (Rounded):")
-    print(preds[0, :5, :5].round().numpy())
+    # print("\nPrediction (Rounded):")
+    # print(preds[0, :5, :5].round().numpy())
     
-    # Check if they match
-    accuracy = (preds.round() == (test_tgt > 0.5)).float().mean()
-    print(f"\nMatrix Accuracy: {accuracy.item() * 100:.2f}%")
+    # # Check if they match
+    # accuracy = (preds.round() == (test_tgt > 0.5)).float().mean()
+    # print(f"\nMatrix Accuracy: {accuracy.item() * 100:.2f}%")
 
 if __name__ == "__main__":
     import numpy as np
