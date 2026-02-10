@@ -127,6 +127,10 @@ def train_full_dataset():
             processed_batches.append((emb, tgt))
 
     epoch = 0
+    best_loss = float('inf')
+    patience = 20  # Stop if no improvement for 20 epochs
+    patience_counter = 0
+    min_delta = 1e-6  # Minimum improvement to count as progress
     while True:
         epoch += 1
         total_loss = 0
@@ -164,14 +168,34 @@ def train_full_dataset():
         
         if epoch % 10 == 0:
             print(f"Epoch {epoch:03d} | Avg Loss: {avg_loss:.6f}")
-        
-        # Exit condition
-        # if avg_loss < 0.0005:
-        #     print(f"\nSUCCESS: Reached target loss at Epoch {epoch}!")
-        #     break
+
+        # Early stopping logic
+        if avg_loss < best_loss - min_delta:
+            best_loss = avg_loss
+            patience_counter = 0
             
-        if epoch >= 300:
-            print("Stopped at 2000.")
+            # Save best model
+            checkpoint = {
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': avg_loss,
+                'model_config': {'d_model': 768, 'nhead': 12, 'num_layers': 6}
+            }
+            torch.save(checkpoint, 'checkpoints/scout_best.pt')
+            print(f"  ★ New best model! Loss: {avg_loss:.6f}")
+        else:
+            patience_counter += 1
+            print(f"  No improvement for {patience_counter} epochs")
+
+        # Stop if no improvement
+        if patience_counter >= patience:
+            print(f"\n✓ Early stopping triggered at epoch {epoch}")
+            print(f"  Best loss: {best_loss:.6f}")
+            break
+        
+        if epoch >= 1000:
+            print("Stopped at 1000.")
             break
 
         # Save final model
