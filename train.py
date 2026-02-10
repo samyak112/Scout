@@ -104,6 +104,57 @@ def analyze_multiscale_aggregator(model):
     
     print("\n" + "="*60)
 
+def load_and_encode_dataset(
+    jsonl_path,
+    device,
+    sbert_batch_size=64
+):
+    sbert = SentenceTransformer(
+        "sentence-transformers/all-mpnet-base-v2",
+        device=device
+    )
+
+    # -------- read samples --------
+    samples = []
+    with open(jsonl_path, "r") as f:
+        for line in f:
+            samples.append(json.loads(line))
+
+    # -------- flatten sentences --------
+    all_sentences = []
+    sentence_counts = []
+
+    for obj in samples:
+        sents = obj["sentences"]
+        all_sentences.extend(sents)
+        sentence_counts.append(len(sents))
+
+    # -------- batch encode --------
+    with torch.no_grad():
+        all_embeddings = sbert.encode(
+            all_sentences,
+            convert_to_tensor=True,
+            batch_size=sbert_batch_size,
+            device=device,
+            show_progress_bar=True
+        )
+
+    # -------- rebuild per-sample tensors --------
+    processed_batches = []
+    offset = 0
+
+    for obj, n in zip(samples, sentence_counts):
+        emb = all_embeddings[offset:offset + n].unsqueeze(0)  # [1, N, 768]
+        tgt = torch.tensor(
+            obj["target"],
+            device=device,
+            dtype=torch.float32
+        ).unsqueeze(0)  # [1, N, N]
+
+        processed_batches.append((emb, tgt))
+        offset += n
+
+    return processed_batches
 
 def train_full_dataset():
     sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
@@ -116,15 +167,7 @@ def train_full_dataset():
     optimizer = optim.AdamW(model.parameters(), lr=1e-4) 
 
     criterion = nn.MSELoss()
-    processed_batches = []
-    
-    with open("train_utils/dataset.jsonl", "r") as f:
-        for line in f:
-            obj = json.loads(line)
-            emb = sbert.encode(obj['sentences'], convert_to_tensor=True,device=device).clone()
-            emb = emb.unsqueeze(0) # [1, N, 768]
-            tgt = torch.tensor(obj['target'],device=device).float().unsqueeze(0) # [1, N, N]
-            processed_batches.append((emb, tgt))
+    processed_batches = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
 
     epoch = 0
     best_loss = float('inf')
