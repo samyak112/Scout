@@ -8,6 +8,7 @@ import json
 from main import Scout
 import os
 os.makedirs('checkpoints', exist_ok=True)
+from collections import defaultdict
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -16,108 +17,6 @@ if device.type == 'cuda':
     print(f"GPU: {torch.cuda.get_device_name(0)}")
     print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
 
-class WeightedMSELoss(nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(self, pred, target):
-        # Weight matrix based on target values
-        weights = torch.ones_like(target)
-        weights = torch.where(target < 0.1, torch.tensor(0.3, device=target.device), weights)  # Low weight for zeros
-        weights = torch.where(target > 0.5, torch.tensor(5.0, device=target.device), weights)  # HIGH weight for strong
-        
-        squared_error = (pred - target) ** 2
-        weighted_loss = (squared_error * weights).mean()
-        
-        return weighted_loss
-
-
-def analyze_multiscale_aggregator(model):
-    """Analyze which layers and heads the MultiScaleAggregator trusts"""
-    
-    print("\n" + "="*60)
-    print("MULTI-SCALE AGGREGATOR ANALYSIS")
-    print("="*60)
-    
-    # ============================================
-    # PART 1: Layer-Level Importance
-    # ============================================
-    print("\n--- LAYER-LEVEL WEIGHTS ---")
-    
-    # Get raw weights
-    raw_weights = model.aggregator.layer_weights.data  # [6]
-    
-    # Convert to probabilities (softmax)
-    layer_probs = F.softmax(raw_weights, dim=0)
-    
-    print(f"\nRaw Weights: {raw_weights.numpy()}")
-    print(f"Probabilities (after softmax): {layer_probs.numpy()}\n")
-    
-    for i in range(len(layer_probs)):
-        bar = "█" * int(layer_probs[i].item() * 50)  # Visual bar
-        print(f"Layer {i}: {layer_probs[i].item():.4f} {bar}")
-    
-    # ============================================
-    # PART 2: Head-Level Importance (Per Layer)
-    # ============================================
-    print("\n" + "="*60)
-    print("HEAD-LEVEL IMPORTANCE (Within Each Layer)")
-    print("="*60)
-    
-    for layer_idx in range(len(model.aggregator.layer_aggregators)):
-        print(f"\n--- Layer {layer_idx} ---")
-        
-        # Get this layer's aggregator network
-        layer_agg = model.aggregator.layer_aggregators[layer_idx]
-        
-        # Extract the first conv layer (12 → 6)
-        first_conv = layer_agg[0]  # Conv2d(12, 6, kernel_size=1)
-        
-        # Get weights: [out_channels=6, in_channels=12, 1, 1]
-        weights = first_conv.weight.data  # [6, 12, 1, 1]
-        
-        # Average across output channels to get per-head importance
-        head_importance = weights.abs().mean(dim=0).squeeze()  # [12]
-        
-        # Sort heads by importance
-        sorted_indices = torch.argsort(head_importance, descending=True)
-        
-        print(f"Top 3 heads in Layer {layer_idx}:")
-        for i in range(3):
-            head_idx = sorted_indices[i].item()
-            importance = head_importance[head_idx].item()
-            bar = "█" * int(importance * 20)
-            print(f"  Head {head_idx}: {importance:.4f} {bar}")
-    
-    # ============================================
-    # PART 3: Overall Top Heads (Combining Both)
-    # ============================================
-    print("\n" + "="*60)
-    print("OVERALL TOP 10 HEADS (Layer Weight × Head Weight)")
-    print("="*60)
-    
-    all_heads = []
-    
-    for layer_idx in range(len(model.aggregator.layer_aggregators)):
-        layer_weight = layer_probs[layer_idx].item()
-        layer_agg = model.aggregator.layer_aggregators[layer_idx]
-        first_conv = layer_agg[0]
-        weights = first_conv.weight.data
-        head_importance = weights.abs().mean(dim=0).squeeze()
-        
-        for head_idx in range(len(head_importance)):
-            # Combined score = layer importance × head importance
-            combined_score = layer_weight * head_importance[head_idx].item()
-            all_heads.append((layer_idx, head_idx, combined_score))
-    
-    # Sort by combined score
-    all_heads.sort(key=lambda x: x[2], reverse=True)
-    
-    print("\nTop 10 Most Important Heads:")
-    for rank, (layer_idx, head_idx, score) in enumerate(all_heads[:10], 1):
-        print(f"Rank {rank:2d}: Layer {layer_idx}, Head {head_idx:2d} | Score: {score:.4f}")
-    
-    print("\n" + "="*60)
 
 def load_and_encode_dataset(
     jsonl_path,
@@ -145,14 +44,25 @@ def load_and_encode_dataset(
         sentence_counts.append(len(sents))
 
     # -------- batch encode --------
-    with torch.no_grad():
-        all_embeddings = sbert.encode(
-            all_sentences,
-            convert_to_tensor=True,
-            batch_size=sbert_batch_size,
-            device=device,
-            show_progress_bar=True
-        )
+    cache_path = "train_utils/embeddings_cache.pt"
+    
+    if os.path.exists(cache_path):
+        print(f"Loading cached embeddings from {cache_path}...")
+        all_embeddings = torch.load(cache_path, map_location=device)
+    else:
+        print("Computing embeddings (this happens once)...")
+        with torch.no_grad():
+            all_embeddings = sbert.encode(
+                all_sentences,
+                convert_to_tensor=True,
+                batch_size=sbert_batch_size,
+                device=device,
+                show_progress_bar=True
+            )
+        
+        # Save to cache for next time
+        print(f"Saving embeddings to {cache_path}...")
+        torch.save(all_embeddings, cache_path)
 
     # -------- rebuild per-sample tensors --------
     processed_samples = []
@@ -160,19 +70,76 @@ def load_and_encode_dataset(
 
     for obj, n in zip(samples, sentence_counts):
         emb = all_embeddings[offset:offset + n]   # [N, 768]
-
         tgt = torch.tensor(
             obj["target"],
             device=device,
             dtype=torch.float32
         )  # [N, N]
 
-        processed_samples.append((emb, tgt))
+        # Keep metadata for grouping
+        metadata = {
+            'information_type_description': obj['information_type_description'],
+            'domain_name': obj['domain_name']
+        }
+
+        processed_samples.append((emb,tgt, metadata))
         offset += n
 
-    random.shuffle(processed_samples)
-
     return processed_samples
+
+def masked_weighted_mse_loss(pred, target, nonzero_weight=10.0):
+    B, N, _ = pred.shape
+    mask = ~torch.eye(N, dtype=torch.bool, device=pred.device).unsqueeze(0)
+    pred_m = pred[mask]
+    target_m = target[mask]
+    weights = torch.where(
+        target_m > 0.05,
+        torch.full_like(target_m, nonzero_weight),
+        torch.ones_like(target_m)
+    )
+    return (weights * (pred_m - target_m) ** 2).mean()
+
+def create_balanced_batches(samples):
+    """
+    Create batches where each batch contains ONE sample from EACH available type.
+    When types run out, create smaller batches with remaining types.
+    
+    Returns batches that can be shuffled each epoch.
+    """
+    # Group by information_type_description
+    grouped = defaultdict(list)
+    
+    for sample in samples:
+        info_type = sample[2]['information_type_description']
+        grouped[info_type].append(sample)
+    
+    # Shuffle each group independently (initial shuffle)
+    for group in grouped.values():
+        random.shuffle(group)
+
+    type_names = sorted(grouped.keys())
+    
+    # Create balanced batches with variable sizes
+    batches = []
+    indices = {t: 0 for t in type_names}
+    
+    while True:
+        batch = []
+        
+        # Try to get one sample from each type
+        for type_name in type_names:
+            if indices[type_name] < len(grouped[type_name]):
+                batch.append(grouped[type_name][indices[type_name]])
+                indices[type_name] += 1
+        
+        # If we got no samples, we're done
+        if len(batch) == 0:
+            break
+        
+        batches.append(batch)
+    
+    # Don't shuffle here - will shuffle in training loop
+    return batches
 
 def train_full_dataset():
     sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
@@ -182,132 +149,126 @@ def train_full_dataset():
     model = model.to(device) 
     model.train()
     
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4) 
+    optimizer = optim.AdamW(model.parameters(), lr=3e-5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=2
+    )
 
-    criterion = WeightedMSELoss()
+    criterion = nn.MSELoss()
 
-    processed_batches = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
-
-    batch_size = 16 
+    processed_samples = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
+    random.shuffle(processed_samples)
+    split_idx = int(len(processed_samples) * 0.8)
+    
+    train_samples = processed_samples[:split_idx]
+    val_samples = processed_samples[split_idx:]
+    
+    print(f"Dataset Split: {len(train_samples)} Train | {len(val_samples)} Validation")
 
     epoch = 0
-    best_loss = float('inf')
+    best_val_loss = float('inf')
     patience = 8 
     patience_counter = 0
     min_delta = 1e-6 
     while True:
         epoch += 1
-        total_loss = 0
-
-        random.shuffle(processed_batches)  # shuffle samples each epoch
         
-        for i in range(0, len(processed_batches), batch_size):
-            batch = processed_batches[i:i + batch_size]
-
-            embeddings = torch.stack([x[0] for x in batch])  # [B, N, 768]
-            target = torch.stack([x[1] for x in batch])      # [B, N, N]
-
-            # shuffling data set so that model doesnt learn positional patterns even after removing PE
-            N = embeddings.shape[1]  # 7 sentences
-
-            shuffled_emb = embeddings.clone()
-            shuffled_tgt = target.clone()
-
-            for b in range(embeddings.shape[0]):  # loop over batch
-                idx = torch.randperm(N, device=device)
-
-                shuffled_emb[b] = embeddings[b, idx, :]
-                shuffled_tgt[b] = target[b, idx][:, idx]
-
-
-            optimizer.zero_grad()
-            output_matrix = model(shuffled_emb)
-
-            loss = criterion(output_matrix, shuffled_tgt)
-
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-
-        print(f'Epoch Number - {epoch}')
+        model.train()
+        train_batches = create_balanced_batches(train_samples)
+        random.shuffle(train_batches)
         
-        avg_loss = total_loss / len(processed_batches)
+        total_train_loss = 0.0
         
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch:03d} | Avg Loss: {avg_loss:.6f}")
+        for batch in train_batches:
+                # 1. Zero gradients BEFORE the batch starts
+                optimizer.zero_grad()
+                                
+                # Process each sample in the batch
+                for emb, tgt, meta in batch:
+                    # ... (your existing shuffling logic is fine) ...
+                    # Add batch dimension
+                    embeddings = emb.unsqueeze(0)
+                    target = tgt.unsqueeze(0)
+                    
+                    N = embeddings.shape[1]
+                    idx = torch.randperm(N, device=device)
+                    shuffled_emb = embeddings[:, idx, :]
+                    shuffled_tgt = target[:, idx][:, :, idx]
+                    
+                    # Forward pass
+                    # (Remember to remove sigmoid inside model if using BCEWithLogitsLoss!)
+                    logits = model(shuffled_emb) 
+                    
+                    # Calculate Loss
+                    loss = masked_weighted_mse_loss(logits, shuffled_tgt)
 
-        # Early stopping logic
-        if avg_loss < best_loss - min_delta:
-            best_loss = avg_loss
+                    
+                    # CRITICAL FIX 1: Normalize loss by batch size
+                    # Since we are summing gradients, we must divide by N 
+                    # so the step size doesn't explode for larger batches.
+                    loss = loss / len(batch)
+                    
+                    # CRITICAL FIX 2: Backward pass INSIDE the loop
+                    # This calculates gradients and FREES THE GRAPH immediately.
+                    loss.backward()
+                    
+                    # Track the raw loss value (float only, no graph)
+                    total_train_loss += (loss.item() * len(batch))
+                
+                # 2. Step the optimizer ONCE after the whole batch is processed
+                # The gradients have been accumulating in model.parameters().grad
+                optimizer.step()
+                
+        avg_train_loss = total_train_loss / len(train_samples)
+
+        # --- VALIDATION LOOP (The "Holdout") ---
+        model.eval() # Disable dropout
+        total_val_loss = 0.0
+        
+        with torch.no_grad(): # Disable gradient calculation (saves RAM/Speed)
+            for emb, tgt, meta in val_samples:
+                # No shuffling needed for validation
+                embeddings = emb.unsqueeze(0)
+                target = tgt.unsqueeze(0)
+                
+                logits = model(embeddings)
+                loss = masked_weighted_mse_loss(logits, shuffled_tgt)
+
+                total_val_loss += loss.item()
+        
+        avg_val_loss = total_val_loss / len(val_samples)
+        scheduler.step(avg_val_loss)
+        current_lr = optimizer.param_groups[0]['lr']
+
+        # --- LOGGING & SAVING ---
+        if epoch % 1 == 0: # Print every epoch
+            print(f"Epoch {epoch:03d} | Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f} | LR: {current_lr:.2e}")
+
+        # Check Early Stopping against VALIDATION loss
+        if avg_val_loss < best_val_loss - min_delta:
+            best_val_loss = avg_val_loss
             patience_counter = 0
             
-            # Save best model
+            # Save Best Model
             checkpoint = {
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-                'loss': avg_loss,
-                'model_config': {'d_model': 768, 'nhead': 12, 'num_layers': 6}
+                'loss': avg_val_loss,
+                'config': {'d_model': 768, 'nhead': 12, 'num_layers': 6}
             }
             torch.save(checkpoint, 'checkpoints/scout_best.pt')
-            print(f"  ★ New best model! Loss: {avg_loss:.6f}")
+            print(f"  ★ Saved new best model (Val Loss: {avg_val_loss:.6f})")
         else:
             patience_counter += 1
-            print(f"  No improvement for {patience_counter} epochs")
+            print(f"  No improvement ({patience_counter}/{patience})")
 
-        # Stop if no improvement
         if patience_counter >= patience:
             print(f"\n✓ Early stopping triggered at epoch {epoch}")
-            print(f"  Best loss: {best_loss:.6f}")
             break
         
         if epoch >= 1000:
-            print("Stopped at 1000.")
             break
-
-        # Save final model
-    final_checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': avg_loss,
-        'model_config': {
-            'd_model': 768,
-            'nhead': 12,
-            'num_layers': 6
-        }
-    }
-    torch.save(final_checkpoint, 'checkpoints/scout.pt')
-    print("\n✓ model saved: scout.pt")
-
-    print("\n--- FINAL ROBUSTNESS TEST ---")
-    model.eval() 
-    analyze_multiscale_aggregator(model)
-
-    
-    # # We take the first batch and shuffle it ONE LAST TIME to prove it works
-    # emb, tgt = processed_batches[0]
-    # idx = torch.randperm(7)
-    
-    # test_emb = emb[:, idx, :]
-    # test_tgt = tgt[:, idx, :][:, :, idx]
-    
-    # print(f"Random Shuffle Order: {idx.tolist()}")
-    
-    # with torch.no_grad():
-    #     preds = model(test_emb)
-        
-    
-    # print("\nTarget (First 5x5 of Shuffled Matrix):")
-    # print((test_tgt[0, :5, :5] > 0.5).numpy())
-    
-    # print("\nPrediction (Rounded):")
-    # print(preds[0, :5, :5].round().numpy())
-    
-    # # Check if they match
-    # accuracy = (preds.round() == (test_tgt > 0.5)).float().mean()
-    # print(f"\nMatrix Accuracy: {accuracy.item() * 100:.2f}%")
 
 if __name__ == "__main__":
     import numpy as np

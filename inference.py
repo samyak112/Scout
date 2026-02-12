@@ -19,7 +19,15 @@ print(f"Using device: {device}")
 def load_scout_model(checkpoint_path: str, device):
     checkpoint = torch.load(checkpoint_path, map_location=device)
 
-    cfg = checkpoint["model_config"]
+    # Try to find config, or fall back to your known defaults
+    if "model_config" in checkpoint:
+        cfg = checkpoint["model_config"]
+    elif "config" in checkpoint:  # specific check for older versions
+        cfg = checkpoint["config"]
+    else:
+        print("⚠ Config not found in checkpoint. Using default 768/12/6 architecture.")
+        cfg = {'d_model': 768, 'nhead': 12, 'num_layers': 6}
+
     model = Scout(
         d_model=cfg["d_model"],
         nhead=cfg["nhead"],
@@ -76,7 +84,10 @@ def run_inference(model, sentence_embeddings):
 if __name__ == "__main__":
 
     # Example sentences
-    sentences = ["The living area's HVAC isn't blowing cold air, even on the moderate setting.", "The refrigerant line in the HVAC system is likely leaking due to environmental corrosion.", "A licensed HVAC technician should inspect and recharge the refrigerant line soon to prevent further damage.", "Cleaning HVAC air filters monthly prevents restricted airflow and potential overheating.", "Dirty HVAC air filters restrict airflow, causing the system to work harder and potentially overheat the living area.", "Dusting the living area furniture makes it look nicer.", "Environmental awareness involves reducing waste and conserving energy."]
+    sentences = [
+        "the tap is leaking",
+        "call a plumber"
+    ]
 
 
 
