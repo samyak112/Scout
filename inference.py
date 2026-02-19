@@ -75,7 +75,8 @@ def run_inference(model, sentence_embeddings):
         score_matrix: [N, N]
     """
     output = model(sentence_embeddings)  # [1, N, N]
-    return output.squeeze(0)              # [N, N]
+    scores = torch.sigmoid(output/0.5)  # ← add this
+    return scores.squeeze(0)              # [N, N]
 
 
 # -----------------------------
@@ -85,9 +86,12 @@ if __name__ == "__main__":
 
     # Example sentences
     sentences = [
-        "the tap is leaking",
-        "call a plumber"
-    ]
+    "the tap is leaking",
+    "call a plumber",
+    "water is dripping from the faucet handle",
+    "tighten the valve nut under the sink",
+    "plumbers charge by the hour",
+]
 
 
 
