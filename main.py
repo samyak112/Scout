@@ -48,7 +48,7 @@ class MultiLayerAggregator(nn.Module):
         return final
 
 class SigmoidAttentionLayer(nn.Module):
-    def __init__(self, d_model, nhead, dropout=0.05):
+    def __init__(self, d_model, nhead, dropout=0.25):
         super().__init__()
         self.d_model = d_model
         self.nhead = nhead
@@ -61,8 +61,8 @@ class SigmoidAttentionLayer(nn.Module):
 
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
-        self.linear1 = nn.Linear(d_model, 3072)
-        self.linear2 = nn.Linear(3072, d_model)
+        self.linear1 = nn.Linear(d_model, d_model * 4)
+        self.linear2 = nn.Linear(d_model * 4, d_model)
         self.dropout = nn.Dropout(dropout)
 
 
@@ -80,7 +80,11 @@ class SigmoidAttentionLayer(nn.Module):
 
         # used Sigmoid instead of Softmax, because I didnt wanted sum = 1 for a row , Now every cell is 0.0 to 1.0 independently.
         attn_probs = torch.sigmoid(raw_scores)
-        attn_output = (attn_probs @ v) / (n ** 0.5) # Soft scaling factor
+        # Unlike softmax, sigmoid rows don't sum to 1 — they can sum up to N.
+        # This means attn_probs @ v is a weighted sum, not a weighted average,
+        # and its magnitude grows with sequence length. Dividing by sqrt(N)
+        # keeps the output scale stable regardless of how many sentences are in the input.
+        attn_output = (attn_probs @ v) / (n ** 0.5)
                 
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, n, self.d_model)
         x = x + self.dropout(self.out_proj(attn_output))
@@ -92,8 +96,9 @@ class SigmoidAttentionLayer(nn.Module):
         return x, attn_probs
 
 class Scout(nn.Module):
-    def __init__(self, d_model, nhead, num_layers):
+    def __init__(self, d_model, nhead, num_layers,input_dim=768):
         super().__init__()
+        self.input_proj = nn.Linear(input_dim, d_model) 
         self.layers = nn.ModuleList([
             SigmoidAttentionLayer(d_model, nhead) for _ in range(num_layers)
         ])
@@ -101,14 +106,20 @@ class Scout(nn.Module):
         self.aggregator = MultiLayerAggregator(num_layers, nhead)
 
     def forward(self, sentence_embeddings):
-        x = sentence_embeddings
+        x = self.input_proj(sentence_embeddings)
         all_raw_scores = []
-
+        B, N, _ = x.shape
+        
+        # Create diagonal mask once
+        diag_mask = torch.eye(N, dtype=torch.bool, device=x.device).unsqueeze(0)
+        
         for layer in self.layers:
-            x, raw_score_matrix = layer(x) 
+            x, raw_score_matrix = layer(x)
+            # Zero out diagonal before aggregation
+            raw_score_matrix = raw_score_matrix.masked_fill(
+                diag_mask.unsqueeze(1), 0.0
+            )
             all_raw_scores.append(raw_score_matrix)
 
-        # returning attention matrix as output
-        
         output = self.aggregator(all_raw_scores)
-        return torch.sigmoid(output)  # ← CRITICAL: Bound output to [0, 1]
+        return output

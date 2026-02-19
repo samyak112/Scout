@@ -87,17 +87,15 @@ def load_and_encode_dataset(
 
     return processed_samples
 
-def masked_weighted_mse_loss(pred, target, nonzero_weight=10.0):
-    B, N, _ = pred.shape
-    mask = ~torch.eye(N, dtype=torch.bool, device=pred.device).unsqueeze(0)
-    pred_m = pred[mask]
+def weighted_bce_loss(pred_logits, target, pos_weight=20.0):
+    B, N, _ = pred_logits.shape
+    mask = ~torch.eye(N, dtype=torch.bool, device=pred_logits.device).unsqueeze(0)
+    pred_m = pred_logits[mask]
     target_m = target[mask]
-    weights = torch.where(
-        target_m > 0.05,
-        torch.full_like(target_m, nonzero_weight),
-        torch.ones_like(target_m)
-    )
-    return (weights * (pred_m - target_m) ** 2).mean()
+    weight = torch.where(target_m > 0.05,
+                         torch.full_like(target_m, pos_weight),
+                         torch.ones_like(target_m))
+    return F.binary_cross_entropy_with_logits(pred_m, target_m, weight=weight)
 
 def create_balanced_batches(samples):
     """
@@ -132,7 +130,6 @@ def create_balanced_batches(samples):
                 batch.append(grouped[type_name][indices[type_name]])
                 indices[type_name] += 1
         
-        # If we got no samples, we're done
         if len(batch) == 0:
             break
         
@@ -142,19 +139,19 @@ def create_balanced_batches(samples):
     return batches
 
 def train_full_dataset():
-    sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
-    sbert = sbert.to(device)
 
-    model = Scout(d_model=768, nhead=12, num_layers=6)
+    d_model = 384
+    nhead = 8
+    num_layers = 3
+
+    model = Scout(d_model=d_model, nhead=nhead, num_layers=num_layers)
     model = model.to(device) 
     model.train()
     
-    optimizer = optim.AdamW(model.parameters(), lr=3e-5)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4,weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=2
+        optimizer, mode='min', factor=0.5, patience=5
     )
-
-    criterion = nn.MSELoss()
 
     processed_samples = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
     random.shuffle(processed_samples)
@@ -180,13 +177,9 @@ def train_full_dataset():
         total_train_loss = 0.0
         
         for batch in train_batches:
-                # 1. Zero gradients BEFORE the batch starts
                 optimizer.zero_grad()
                                 
-                # Process each sample in the batch
                 for emb, tgt, meta in batch:
-                    # ... (your existing shuffling logic is fine) ...
-                    # Add batch dimension
                     embeddings = emb.unsqueeze(0)
                     target = tgt.unsqueeze(0)
                     
@@ -195,44 +188,34 @@ def train_full_dataset():
                     shuffled_emb = embeddings[:, idx, :]
                     shuffled_tgt = target[:, idx][:, :, idx]
                     
-                    # Forward pass
-                    # (Remember to remove sigmoid inside model if using BCEWithLogitsLoss!)
-                    logits = model(shuffled_emb) 
+                    logits = model(shuffled_emb)
                     
                     # Calculate Loss
-                    loss = masked_weighted_mse_loss(logits, shuffled_tgt)
+                    loss = weighted_bce_loss(logits, shuffled_tgt)
 
-                    
-                    # CRITICAL FIX 1: Normalize loss by batch size
-                    # Since we are summing gradients, we must divide by N 
-                    # so the step size doesn't explode for larger batches.
                     loss = loss / len(batch)
                     
-                    # CRITICAL FIX 2: Backward pass INSIDE the loop
-                    # This calculates gradients and FREES THE GRAPH immediately.
                     loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     
                     # Track the raw loss value (float only, no graph)
                     total_train_loss += (loss.item() * len(batch))
-                
-                # 2. Step the optimizer ONCE after the whole batch is processed
-                # The gradients have been accumulating in model.parameters().grad
+
                 optimizer.step()
                 
         avg_train_loss = total_train_loss / len(train_samples)
 
         # --- VALIDATION LOOP (The "Holdout") ---
-        model.eval() # Disable dropout
+        model.eval()
         total_val_loss = 0.0
         
-        with torch.no_grad(): # Disable gradient calculation (saves RAM/Speed)
+        with torch.no_grad():
             for emb, tgt, meta in val_samples:
-                # No shuffling needed for validation
                 embeddings = emb.unsqueeze(0)
                 target = tgt.unsqueeze(0)
                 
                 logits = model(embeddings)
-                loss = masked_weighted_mse_loss(logits, shuffled_tgt)
+                loss = weighted_bce_loss(logits, target)
 
                 total_val_loss += loss.item()
         
@@ -241,7 +224,7 @@ def train_full_dataset():
         current_lr = optimizer.param_groups[0]['lr']
 
         # --- LOGGING & SAVING ---
-        if epoch % 1 == 0: # Print every epoch
+        if epoch % 1 == 0: #
             print(f"Epoch {epoch:03d} | Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f} | LR: {current_lr:.2e}")
 
         # Check Early Stopping against VALIDATION loss
@@ -249,13 +232,12 @@ def train_full_dataset():
             best_val_loss = avg_val_loss
             patience_counter = 0
             
-            # Save Best Model
             checkpoint = {
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': avg_val_loss,
-                'config': {'d_model': 768, 'nhead': 12, 'num_layers': 6}
+                'config': {'d_model': d_model, 'nhead': nhead, 'num_layers': num_layers}
             }
             torch.save(checkpoint, 'checkpoints/scout_best.pt')
             print(f"  ★ Saved new best model (Val Loss: {avg_val_loss:.6f})")
