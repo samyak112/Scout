@@ -80,7 +80,11 @@ class SigmoidAttentionLayer(nn.Module):
 
         # used Sigmoid instead of Softmax, because I didnt wanted sum = 1 for a row , Now every cell is 0.0 to 1.0 independently.
         attn_probs = torch.sigmoid(raw_scores)
-        attn_output = (attn_probs @ v) / (n ** 0.5) # Soft scaling factor
+        # Unlike softmax, sigmoid rows don't sum to 1 — they can sum up to N.
+        # This means attn_probs @ v is a weighted sum, not a weighted average,
+        # and its magnitude grows with sequence length. Dividing by sqrt(N)
+        # keeps the output scale stable regardless of how many sentences are in the input.
+        attn_output = (attn_probs @ v) / (n ** 0.5)
                 
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, n, self.d_model)
         x = x + self.dropout(self.out_proj(attn_output))

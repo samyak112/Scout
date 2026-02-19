@@ -75,7 +75,7 @@ def run_inference(model, sentence_embeddings):
         score_matrix: [N, N]
     """
     output = model(sentence_embeddings)  # [1, N, N]
-    scores = torch.sigmoid(output/0.5)  # ← add this
+    scores = torch.sigmoid(output/0.5) 
     return scores.squeeze(0)              # [N, N]
 
 

@@ -130,7 +130,6 @@ def create_balanced_batches(samples):
                 batch.append(grouped[type_name][indices[type_name]])
                 indices[type_name] += 1
         
-        # If we got no samples, we're done
         if len(batch) == 0:
             break
         
@@ -178,13 +177,9 @@ def train_full_dataset():
         total_train_loss = 0.0
         
         for batch in train_batches:
-                # 1. Zero gradients BEFORE the batch starts
                 optimizer.zero_grad()
                                 
-                # Process each sample in the batch
                 for emb, tgt, meta in batch:
-                    # ... (your existing shuffling logic is fine) ...
-                    # Add batch dimension
                     embeddings = emb.unsqueeze(0)
                     target = tgt.unsqueeze(0)
                     
@@ -193,40 +188,29 @@ def train_full_dataset():
                     shuffled_emb = embeddings[:, idx, :]
                     shuffled_tgt = target[:, idx][:, :, idx]
                     
-                    # Forward pass
-                    # (Remember to remove sigmoid inside model if using BCEWithLogitsLoss!)
                     logits = model(shuffled_emb)
                     
                     # Calculate Loss
                     loss = weighted_bce_loss(logits, shuffled_tgt)
 
-                    
-                    # CRITICAL FIX 1: Normalize loss by batch size
-                    # Since we are summing gradients, we must divide by N 
-                    # so the step size doesn't explode for larger batches.
                     loss = loss / len(batch)
                     
-                    # CRITICAL FIX 2: Backward pass INSIDE the loop
-                    # This calculates gradients and FREES THE GRAPH immediately.
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     
                     # Track the raw loss value (float only, no graph)
                     total_train_loss += (loss.item() * len(batch))
-                
-                # 2. Step the optimizer ONCE after the whole batch is processed
-                # The gradients have been accumulating in model.parameters().grad
+
                 optimizer.step()
                 
         avg_train_loss = total_train_loss / len(train_samples)
 
         # --- VALIDATION LOOP (The "Holdout") ---
-        model.eval() # Disable dropout
+        model.eval()
         total_val_loss = 0.0
         
-        with torch.no_grad(): # Disable gradient calculation (saves RAM/Speed)
+        with torch.no_grad():
             for emb, tgt, meta in val_samples:
-                # No shuffling needed for validation
                 embeddings = emb.unsqueeze(0)
                 target = tgt.unsqueeze(0)
                 
@@ -240,7 +224,7 @@ def train_full_dataset():
         current_lr = optimizer.param_groups[0]['lr']
 
         # --- LOGGING & SAVING ---
-        if epoch % 1 == 0: # Print every epoch
+        if epoch % 1 == 0: #
             print(f"Epoch {epoch:03d} | Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f} | LR: {current_lr:.2e}")
 
         # Check Early Stopping against VALIDATION loss
@@ -248,7 +232,6 @@ def train_full_dataset():
             best_val_loss = avg_val_loss
             patience_counter = 0
             
-            # Save Best Model
             checkpoint = {
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
