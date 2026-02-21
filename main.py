@@ -4,36 +4,48 @@ import torch.nn.functional as F
 import math
 
 
-class DynamicElementAggregator(nn.Module):
-    def __init__(self, d_model, num_layers=6, nhead=12):
+class MultiLayerAggregator(nn.Module):
+    def __init__(self, num_layers=6, nhead=12):
         super().__init__()
-        self.total_heads = num_layers * nhead
         
-        # The Micro-Router
-        self.router = nn.Sequential(
-            nn.Linear(d_model, d_model // 2),
-            nn.GELU(),
-            nn.Linear(d_model // 2, self.total_heads)
-        )
+        # Separate processing for each layer
+        self.layer_aggregators = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(nhead, nhead // 2, kernel_size=1),
+                nn.GELU(),
+                nn.Conv2d(nhead // 2, 1, kernel_size=1)            
+            )
+            for _ in range(num_layers)
+        ])
         
-        # Logit Bias: Allows the network to safely center its unbounded predictions
-        self.bias = nn.Parameter(torch.zeros(1))
+        # Learnable weights for combining layers
+        self.layer_weights = nn.Parameter(torch.randn(num_layers) * 0.1)
 
-    def forward(self, x, all_layer_scores):
-        # 1. Generate UNBOUNDED dynamic weights 
-        # By removing Softmax, the network can output true Logits (-inf to +inf)
-        raw_weights = self.router(x) 
         
-        # 2. Stack all attention maps into one tensor
-        stacked_scores = torch.cat(all_layer_scores, dim=1) 
+    def forward(self, all_layer_scores):
+        """
+        Input: List of [Batch, nhead, N, N] tensors (one per layer)
+        Output: [Batch, N, N]
+        """
+        layer_outputs = []
         
-        # 3. The Routing Math (Einstein Summation)
-        # raw_weights can now be negative or >1, allowing the router to actively 
-        # subtract bad attention heads or massively amplify good ones.
-        final_matrix = torch.einsum('b n h, b h n m -> b n m', raw_weights, stacked_scores)
+        # Process each layer separately
+        for i, layer_scores in enumerate(all_layer_scores):
+            # layer_scores: [Batch, 12, N, N]
+            processed = self.layer_aggregators[i](layer_scores)  # [Batch, 1, N, N]
+            layer_outputs.append(processed)
         
-        # Add bias for stable logit zero-centering
-        return final_matrix + self.bias
+        # Stack: [Batch, num_layers, N, N]
+        stacked = torch.cat(layer_outputs, dim=1)
+        
+        # using softmax here so that we can weight the importance of each layer
+        weights = F.softmax(self.layer_weights, dim=0)  # [6]
+        weights = weights.view(1, -1, 1, 1)  # [1, 6, 1, 1]
+        
+        # Weighted sum
+        final = (stacked * weights).sum(dim=1)  # [Batch, N, N]
+        
+        return final
 
 class SigmoidAttentionLayer(nn.Module):
     def __init__(self, d_model, nhead, dropout=0.25):
@@ -94,7 +106,7 @@ class Scout(nn.Module):
             SigmoidAttentionLayer(d_model, nhead) for _ in range(num_layers)
         ])
         
-        self.aggregator = DynamicElementAggregator(d_model, num_layers, nhead)
+        self.aggregator = MultiLayerAggregator(num_layers, nhead)
 
     def forward(self, sentence_embeddings):
         x = self.input_proj(sentence_embeddings)
@@ -112,5 +124,5 @@ class Scout(nn.Module):
             )
             all_raw_scores.append(raw_score_matrix)
 
-        output = self.aggregator(x, all_raw_scores)
+        output = self.aggregator(all_raw_scores)
         return output
