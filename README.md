@@ -42,7 +42,7 @@ To test how Scout handles directional logic compared to standard retrieval, we r
 ### Interpretation
 In this scenario, SBERT correctly identifies that "Buy the best faucet" is highly relevant to the topic of a leaking faucet, ranking it #1. However, if this context is passed to an autonomous agent, it introduces topical noise rather than a solution. 
 
-By applying an asymmetric $N \times N$ pass, Scout actively lowered the score of the Amazon link to `0.5356`, prioritizing the imperative physical actions ("Tighten", "Turn off") at `0.95+`. It acts as a routing filter to ensure agents retrieve the mechanical next step rather than conversational or commercial noise.
+By applying an asymmetric $N \times N$ pass, Scout actively lowered the score of the Amazon link to `0.5356`, prioritizing the imperative physical actions ("Tighten", "Turn off") at `0.95+`. It acts as a routing filter to ensure agents retrieve the mechanical next step rather than conversational or commercial noise. Scout ignores simple keyword overlap to evaluate the logical utility between sentences. It identifies when Sentence B provides a functional next step, cause, or resolution for Sentence A, even if they share no common vocabulary.
 
 ## How it works
 
@@ -59,6 +59,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
