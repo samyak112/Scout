@@ -1,6 +1,7 @@
 # Scout: Directional Information Gain Between Sentences
 
 **Status:** Experimental | [Details in Issues](https://github.com/samyak112/Scout/issues/2)
+Checkout the Scout [here](https://huggingface.co/SpiderHomie/Scout/tree/main)
 
 ## What is this?
 
@@ -58,5 +59,6 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
