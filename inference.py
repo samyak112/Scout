@@ -75,21 +75,15 @@ def run_agentic_rag_test(scout_model):
     print("🤖 THE AGENTIC RAG TEST: EXECUTION TIME PROFILING")
     print("=" * 110)
 
-    query = "My faucet is leaking heavily under the sink."
+    query = "My bread dough didn't rise at all after sitting for two hours."
 
     corpus = [
-        "Tighten the main valve nut using a wrench.",              
-        "Buy the best faucet here on amazon",
-        "Turn off the main water supply immediately.",             
-        "Sinks are usually made of porcelain or stainless steel.", 
-        "Water bills can be very expensive in the summer.",        
-        "Python is a great programming language for AI.",    
-        "Tighten the main valve nut using a wrench.",              
-        "Buy the best faucet here on amazon",
-        "Turn off the main water supply immediately.",             
-        "Sinks are usually made of porcelain or stainless steel.", 
-        "Water bills can be very expensive in the summer.",        
-        "Python is a great programming language for AI.",          
+        "Bread dough usually needs to sit for at least two hours to properly rise.", # Semantic Echo / Trivia
+        "If your bread dough doesn't rise after two hours, it will bake into a dense, hard brick.", # Implication (Not a cause)
+        "The water you poured in was boiling and killed the active culture.", # ✅ THE CAUSE (Zero lexical overlap)
+        "You should cover the bread dough with a damp towel while it is sitting and rising.", # Tangential Advice
+        "Sometimes bread dough simply won't rise even if you let it sit for over two hours.", # Pure Echo
+        "Flour contains gluten proteins that form a network to trap gas bubbles." # Unrelated Fact
     ]
 
     # Helper function to ensure GPU operations finish before timing
