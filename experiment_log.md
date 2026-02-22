@@ -9,3 +9,5 @@ nn.Conv2d(nhead, nhead * 4, kernel_size=1),
 nn.GELU(),
 nn.Conv2d(nhead * 4, 1, kernel_size=1)
 '''
+8. tried making changes in the attention block by removing sigmoid and working with raw scores and basic RELU
+9. Trying to make changes in training script like 

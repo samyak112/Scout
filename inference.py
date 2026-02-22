@@ -1,111 +1,167 @@
-import time
+"""
+NSP Continuation Test — Scout vs SBERT vs Cross-Encoder
+=========================================================
+Tests whether Scout can distinguish genuine sentence continuations
+from plausible impostors — sentences that sound like they could follow
+but functionally don't.
+
+This is the core capability NSP in BERT tried and failed to learn.
+
+Candidate types:
+  GENUINE    — actually continues the context, logically or causally
+  IMPOSTOR   — plausible sounding, same topic, but doesn't follow
+  UNRELATED  — clearly wrong domain
+
+The hard part is IMPOSTOR. SBERT will score it high because it shares
+vocabulary and topic. A model with real continuation understanding
+should suppress it.
+"""
+
 import torch
+import torch.nn.functional as F
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from main import Scout
 
-# -----------------------------
-# 1. Setup & Configuration
-# -----------------------------
-# Explicitly forcing CPU as requested
-device = torch.device("cpu")
-print(f"Running on: {device}\n")
+import time
+import torch
+import numpy as np
+from datasets import load_dataset
+from sentence_transformers import SentenceTransformer, CrossEncoder
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Hardware: {device.type.upper()}")
+
+# ==========================================
+# 1. Load Models
+# ==========================================
+print("Loading Models...")
+sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=device)
+cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device=device)
 
 def load_scout(checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    # Fallback to defaults if config isn't in your checkpoint
     cfg = checkpoint.get("config", {'d_model': 384, 'nhead': 8, 'num_layers': 3})
-    
     model = Scout(d_model=cfg["d_model"], nhead=cfg["nhead"], num_layers=cfg["num_layers"])
-    model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(checkpoint["model_state_dict"], strict=False)
     model.to(device)
     model.eval()
     return model
 
-# Load Models
-print("Loading SBERT (Scout Encoder)...")
-sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=device)
-
-print("Loading Scout Model...")
 scout_model = load_scout("checkpoints/scout_best.pt")
 
-print("Loading Cross-Encoder Baseline...")
-# ms-marco is specifically trained to rank answers for queries
+
+import torch
+import numpy as np
+from sentence_transformers import SentenceTransformer, util
+from sentence_transformers.cross_encoder import CrossEncoder
+
+# Initialize devices and baseline models
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=device)
 cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device=device)
 
-# -----------------------------
-# 2. The "Human Intuition" Data
-# -----------------------------
-query = "My faucet is leaking heavily under the sink."
+import time
+import torch
+import numpy as np
+from sentence_transformers import SentenceTransformer, util
+from sentence_transformers.cross_encoder import CrossEncoder
 
-# A mix of direct solutions, shared-topic useless facts, and completely random facts.
-corpus = [
-    "Tighten the main valve nut using a wrench.",              # The actual solution
-    "Turn off the main water supply immediately.",             # Good next step
-    "Sinks are usually made of porcelain or stainless steel.", # Hard Negative (Shared topic, no utility)
-    "Water bills can be very expensive in the summer.",        # Hard Negative (Shared topic, no utility)
-    "Python is a great programming language for AI.",          # Completely unrelated
-]
+# Initialize devices and baseline models
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+sbert = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=device)
+cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device=device)
 
-# Combine query and corpus so Scout can build its N x N matrix
-all_sentences = [query] + corpus
+def run_agentic_rag_test(scout_model):
+    print("🤖 THE AGENTIC RAG TEST: EXECUTION TIME PROFILING")
+    print("=" * 110)
 
-print("-" * 50)
-print(f"QUERY: {query}")
-print("-" * 50)
+    query = "My faucet is leaking heavily under the sink."
 
-# ==========================================
-# TEST A: SCOUT PIPELINE
-# ==========================================
-# 1. Measure SBERT Encoding Time
-t0 = time.perf_counter()
-with torch.no_grad():
-    embeddings = sbert.encode(all_sentences, convert_to_tensor=True, device=device)
-    embeddings = embeddings.unsqueeze(0) # [1, N, 768]
-t_encode = time.perf_counter() - t0
+    corpus = [
+        "Tighten the main valve nut using a wrench.",              
+        "Buy the best faucet here on amazon",
+        "Turn off the main water supply immediately.",             
+        "Sinks are usually made of porcelain or stainless steel.", 
+        "Water bills can be very expensive in the summer.",        
+        "Python is a great programming language for AI.",    
+        "Tighten the main valve nut using a wrench.",              
+        "Buy the best faucet here on amazon",
+        "Turn off the main water supply immediately.",             
+        "Sinks are usually made of porcelain or stainless steel.", 
+        "Water bills can be very expensive in the summer.",        
+        "Python is a great programming language for AI.",          
+    ]
 
-# 2. Measure Scout Inference Time
-t1 = time.perf_counter()
-with torch.no_grad():
-    raw_output = scout_model(embeddings)
-    # Using your /0.5 scaling
-    scout_scores = torch.sigmoid(raw_output / 0.5).squeeze(0) 
-t_infer = time.perf_counter() - t1
+    # Helper function to ensure GPU operations finish before timing
+    def sync():
+        if device.type == "cuda":
+            torch.cuda.synchronize()
 
-# 3. Extract the Query -> Corpus row (Row 0, Columns 1 to N)
-query_to_corpus_scores = scout_scores[0, 1:].tolist()
+    # --- SBERT (Bi-Encoder Baseline) ---
+    sync()
+    t0_sbert = time.perf_counter()
+    with torch.no_grad():
+        q_emb = sbert.encode([query], convert_to_tensor=True, device=device)
+        c_emb = sbert.encode(corpus, convert_to_tensor=True, device=device)
+        sync()
+        t1_sbert = time.perf_counter()
+        
+        # SBERT pure retrieval logic (Dot Product/Cosine Sim)
+        sbert_scores = util.cos_sim(q_emb, c_emb)[0].cpu().numpy()
+        sync()
+        t2_sbert = time.perf_counter()
+        
+    sbert_total_time = t2_sbert - t0_sbert
+    sbert_no_enc_time = t2_sbert - t1_sbert
 
-# Pair scores with sentences and sort descending
-scout_results = list(zip(query_to_corpus_scores, corpus))
-scout_results.sort(key=lambda x: x[0], reverse=True)
+    # --- Cross-Encoder (Industry Standard Reranker) ---
+    ce_pairs = [[query, doc] for doc in corpus]
+    sync()
+    t0_ce = time.perf_counter()
+    # Cross-Encoders cannot separate encoding from scoring
+    ce_scores = torch.sigmoid(torch.tensor(cross_encoder.predict(ce_pairs))).numpy()
+    sync()
+    t1_ce = time.perf_counter()
+    ce_total_time = t1_ce - t0_ce
 
-# ==========================================
-# TEST B: CROSS-ENCODER PIPELINE
-# ==========================================
-# Cross encoders need data formatted as pairs: [[Query, Corpus1], [Query, Corpus2], ...]
-pairs = [[query, doc] for doc in corpus]
+    # --- Scout (The Action Filter) ---
+    sync()
+    t0_scout = time.perf_counter()
+    with torch.no_grad():
+        # Encoding step (Can be skipped in production if fetching cached embeddings)
+        q_emb_s = sbert.encode([query], convert_to_tensor=True, device=device)
+        c_emb_s = sbert.encode(corpus, convert_to_tensor=True, device=device)
+        
+        sync()
+        t1_scout = time.perf_counter()
+        
+        # Scout pure retrieval logic (The N x N Matrix)
+        all_emb = torch.cat([q_emb_s, c_emb_s], dim=0).unsqueeze(0)
+        out = torch.sigmoid(scout_model(all_emb) / 0.5).squeeze(0)
+        scout_scores = out[0, 1:].cpu().numpy()
+        
+        sync()
+        t2_scout = time.perf_counter()
 
-t2 = time.perf_counter()
-cross_scores = cross_encoder.predict(pairs)
-t_cross = time.perf_counter() - t2
+    scout_total_time = t2_scout - t0_scout
+    scout_no_enc_time = t2_scout - t1_scout
 
-cross_results = list(zip(cross_scores, corpus))
-cross_results.sort(key=lambda x: x[0], reverse=True)
+    print(f"AGENT STATE: {query}\n")
+    
+    def print_top_3(name, scores, total_time, no_enc_time=None):
+        print(f"--- Top 3 according to {name} ---")
+        if no_enc_time is not None:
+            print(f"⏱️  Time (Total): {total_time * 1000:.2f} ms | Time (Without Encoding): {no_enc_time * 1000:.2f} ms")
+        else:
+            print(f"⏱️  Time (Total): {total_time * 1000:.2f} ms | Time (Without Encoding): N/A (Joint architecture)")
+            
+        top_3_idx = np.argsort(scores)[::-1][:3]
+        for rank, idx in enumerate(top_3_idx):
+            print(f"{rank+1}. [{scores[idx]:.4f}] {corpus[idx]}")
+        print()
 
+    print_top_3("SBERT", sbert_scores, sbert_total_time, sbert_no_enc_time)
+    print_top_3("Cross-Encoder", ce_scores, ce_total_time, None)
+    print_top_3("Scout", scout_scores, scout_total_time, scout_no_enc_time)
 
-# -----------------------------
-# 3. Print the Showdown
-# -----------------------------
-print("\n🏆 SCOUT MODEL RANKING")
-print(f"Encoding Time:  {t_encode:.4f} seconds")
-print(f"Inference Time: {t_infer:.4f} seconds")
-print(f"Total Time:     {t_encode + t_infer:.4f} seconds")
-for score, text in scout_results:
-    print(f"[{score:.4f}] {text}")
-
-print("\n" + "="*50)
-
-print("\n⚖️ CROSS-ENCODER BASELINE RANKING")
-print(f"Total Time:     {t_cross:.4f} seconds")
-for score, text in cross_results:
-    print(f"[{score:.4f}] {text}")
-print("\n")
+run_agentic_rag_test(scout_model)

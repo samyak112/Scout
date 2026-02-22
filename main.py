@@ -76,18 +76,23 @@ class SigmoidAttentionLayer(nn.Module):
         k = self.k_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
         v = self.v_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
 
-        raw_scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        raw_scores = (q @ k.transpose(-2, -1))
 
         # used Sigmoid instead of Softmax, because I didnt wanted sum = 1 for a row , Now every cell is 0.0 to 1.0 independently.
-        attn_probs = torch.sigmoid(raw_scores)
+        # attn_probs = torch.sigmoid(raw_scores)
         # DYNAMIC NORMALIZATION:
         # Since Sigmoid rows don't sum to 1 (unlike Softmax), a raw (attn_probs @ v) 
         # is a weighted SUM that fluctuates based on how many 'hits' the Sigmoid finds.
         # By dividing by the actual row_sum, we convert this into a weighted AVERAGE.
         # This preserves the semantic 'energy' of the signal and ensures the output 
         # scale remains constant regardless of the number of candidates (N).
-        row_sums = attn_probs.sum(dim=-1, keepdim=True) + 1e-6
-        attn_output = (attn_probs @ v) / row_sums
+        # row_sums = attn_probs.sum(dim=-1, keepdim=True) + 1e-6
+        scaled_scores = raw_scores / math.sqrt(self.head_dim)
+        attn_weights = torch.sigmoid(scaled_scores)
+
+        row_sums = attn_weights.sum(dim=-1, keepdim=True) + 1e-6
+        attn_output = (attn_weights @ v) / row_sums
+
                 
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, n, self.d_model)
         x = x + self.dropout(self.out_proj(attn_output))
@@ -96,7 +101,7 @@ class SigmoidAttentionLayer(nn.Module):
         ff = self.linear2(self.dropout(F.gelu(self.linear1(normed))))
         x = x + self.dropout(ff)
 
-        return x, attn_probs
+        return x, raw_scores
 
 class Scout(nn.Module):
     def __init__(self, d_model, nhead, num_layers,input_dim=768):

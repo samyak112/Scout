@@ -148,7 +148,7 @@ def train_full_dataset():
     model = model.to(device) 
     model.train()
     
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4,weight_decay=0.01)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4,weight_decay=0.05)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=5
     )
@@ -164,9 +164,10 @@ def train_full_dataset():
 
     epoch = 0
     best_val_loss = float('inf')
-    patience = 8 
+    patience = 13
     patience_counter = 0
     min_delta = 1e-6 
+
     while True:
         epoch += 1
         
@@ -189,6 +190,8 @@ def train_full_dataset():
                     shuffled_tgt = target[:, idx][:, :, idx]
                     
                     logits = model(shuffled_emb)
+
+                    logits = torch.clamp(logits, min=-10, max=10)
                     
                     # Calculate Loss
                     loss = weighted_bce_loss(logits, shuffled_tgt)
@@ -196,11 +199,11 @@ def train_full_dataset():
                     loss = loss / len(batch)
                     
                     loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     
                     # Track the raw loss value (float only, no graph)
                     total_train_loss += (loss.item() * len(batch))
 
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
                 
         avg_train_loss = total_train_loss / len(train_samples)
@@ -215,6 +218,7 @@ def train_full_dataset():
                 target = tgt.unsqueeze(0)
                 
                 logits = model(embeddings)
+                logits = torch.clamp(logits, min=-10, max=10) 
                 loss = weighted_bce_loss(logits, target)
 
                 total_val_loss += loss.item()
