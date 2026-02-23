@@ -38,7 +38,6 @@ To test how Scout handles directional logic compared to standard retrieval, we r
 | **3.** | `[0.3802]` Tighten the main valve nut using a wrench. | `[0.0001]` Turn off the main water supply... | `[0.5356]` Buy the best faucet here on amazon |
 | **Time** | 119.84 ms *(0.14 ms without encoding)* | 22.39 ms *(Joint architecture)* | 73.91 ms *(2.33 ms without encoding)* |
 
-### Interpretation
 In this scenario, SBERT correctly identifies that "Buy the best faucet" is highly relevant to the topic of a leaking faucet, ranking it #1. However, if this context is passed to an autonomous agent, it introduces topical noise rather than a solution. 
 
 By applying an asymmetric $N \times N$ pass, Scout actively lowered the score of the Amazon link to `0.5356`, prioritizing the imperative physical actions ("Tighten", "Turn off") at `0.95+`. It acts as a routing filter to ensure agents retrieve the mechanical next step rather than conversational or commercial noise. Scout ignores simple keyword overlap to evaluate the logical utility between sentences. It identifies when Sentence B provides a functional next step, cause, or resolution for Sentence A, even if they share no common vocabulary.
@@ -77,7 +76,7 @@ See [`example.py`](example.py) for a full working demo.
 This is an architecture experiment, not a production retrieval system.
 
 The benchmark here is one hand-crafted test case designed to illustrate 
-the concept — not a rigorous evaluation. The model is trained on ~4,500 
+the concept not a rigorous evaluation. The model is trained on ~4,500 
 synthetic sentence pairs, which is small. I don't yet know how well it 
 generalises to arbitrary domains and text styles.
 
@@ -86,9 +85,11 @@ encode functional utility between sentences rather than just contextual 
 compatibility? Early results suggest yes, but this is still an open 
 question with limited evidence.
 
-Treat it as an interesting primitive worth experimenting with — not a 
+Treat it as an interesting primitive worth experimenting with not a 
 drop-in replacement for established retrieval methods. If you find cases 
 where it works well or breaks badly, I want to know.
+
+One thing i have noticed is that Scout doesnt works fine when there are only 2-3 sentences because the results are coming directly from attention's qk mechanism so i suspect that when there are less sentences there is not much to attend to and thats when this happens
 
 ## Applications
 These are some applications where I think scout would be helpful
@@ -104,3 +105,4 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
