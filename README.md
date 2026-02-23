@@ -1,7 +1,6 @@
 # Scout: Directional Information Gain Between Sentences
 
 **Status:** Experimental | [Details in Issues](https://github.com/samyak112/Scout/issues/2)
-Checkout the Scout [here](https://huggingface.co/SpiderHomie/Scout/tree/main)
 
 ## What is this?
 
@@ -19,6 +18,24 @@ This asymmetry is primarily useful for:
 - **Retrieval (RAG):** Filtering out "semantic echoes" to find executable actions.
 - **Clustering:** Grouping sentences by mutual information gain.
 - **Segmentation:** Detecting when a procedural chain logically shifts.
+
+## A Note on What This Actually Is
+
+This is an architecture experiment, not a production retrieval system.
+
+The benchmark here is one hand-crafted test case designed to illustrate 
+the concept — not a rigorous evaluation. The model is trained on ~4,500 
+synthetic sentence pairs, which is small. I don't yet know how well it 
+generalises to arbitrary domains and text styles.
+
+The real question I'm exploring is: can attention mechanics be trained to 
+encode functional utility between sentences rather than just contextual 
+compatibility? Early results suggest yes, but this is still an open 
+question with limited evidence.
+
+Treat it as an interesting primitive worth experimenting with — not a 
+drop-in replacement for established retrieval methods. If you find cases 
+where it works well or breaks badly, I want to know.
 
 ## Why not use existing methods?
 
@@ -53,12 +70,33 @@ Scout processes **batches of sentences** and outputs an **N×N relevance matrix*
 2. **Asymmetric Projections:** Uses separate $W_Q$ (Need) and $W_K$ (Resolution) matrices to map directional logic.
 3. **Sigmoid attention:** Output is calculated via Sigmoid instead of Softmax, allowing relationships to be independent rather than competitive.
 
+## Installation
+
+Requires Python 3.9+
+```bash
+uv sync
+```
+
+## Download the Model
+
+Download the checkpoint from [Hugging Face](https://huggingface.co/your-model-link) and place it at:
+```
+scout/
+└── checkpoints/
+    └── scout_best.pt
+```
+
+## Usage
+
+See [`example.py`](example.py) for a full working demo.
+
 ## Current Status
 
 The model is currently in active testing. 
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
