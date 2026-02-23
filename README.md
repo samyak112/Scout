@@ -19,24 +19,6 @@ This asymmetry is primarily useful for:
 - **Clustering:** Grouping sentences by mutual information gain.
 - **Segmentation:** Detecting when a procedural chain logically shifts.
 
-## A Note on What This Actually Is
-
-This is an architecture experiment, not a production retrieval system.
-
-The benchmark here is one hand-crafted test case designed to illustrate 
-the concept — not a rigorous evaluation. The model is trained on ~4,500 
-synthetic sentence pairs, which is small. I don't yet know how well it 
-generalises to arbitrary domains and text styles.
-
-The real question I'm exploring is: can attention mechanics be trained to 
-encode functional utility between sentences rather than just contextual 
-compatibility? Early results suggest yes, but this is still an open 
-question with limited evidence.
-
-Treat it as an interesting primitive worth experimenting with — not a 
-drop-in replacement for established retrieval methods. If you find cases 
-where it works well or breaks badly, I want to know.
-
 ## Why not use existing methods?
 
 Existing methods are industry standards for search and QA, but they optimize for different mathematical goals:
@@ -90,15 +72,35 @@ scout/
 
 See [`example.py`](example.py) for a full working demo.
 
+## A Note on What This Actually Is
+
+This is an architecture experiment, not a production retrieval system.
+
+The benchmark here is one hand-crafted test case designed to illustrate 
+the concept — not a rigorous evaluation. The model is trained on ~4,500 
+synthetic sentence pairs, which is small. I don't yet know how well it 
+generalises to arbitrary domains and text styles.
+
+The real question I'm exploring is: can attention mechanics be trained to 
+encode functional utility between sentences rather than just contextual 
+compatibility? Early results suggest yes, but this is still an open 
+question with limited evidence.
+
+Treat it as an interesting primitive worth experimenting with — not a 
+drop-in replacement for established retrieval methods. If you find cases 
+where it works well or breaks badly, I want to know.
+
+## Applications
+These are some applications where I think scout would be helpful
+
+- Search: Given query A's row, the highest-scoring B is my answer
+- Clustering: Find groups where sentences mutually attend to each other
+- Topic detection: Track when attention patterns shift across a document
+- Asymmetry analysis: Measure whether A→B ≠ B→A
+
 ## Current Status
 
 The model is currently in active testing. 
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
-
-
-
-
-
-
