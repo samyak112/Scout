@@ -56,23 +56,16 @@ Scout processes **batches of sentences** and outputs an **N×N relevance matrix*
 Requires Python 3.9+
 ```bash
 uv sync
+python3 example.py
 ```
 
-## Download the Model
-
-Download the checkpoint from [Hugging Face](https://huggingface.co/your-model-link) and place it at:
-```
-scout/
-└── checkpoints/
-    └── scout_best.pt
-```
+The model will be downloaded automatically from Hugging Face on first run.
 
 ## A Note on What This Actually Is
 
 This is an architecture experiment, not a production retrieval system.
 
-The benchmark here is one hand-crafted test case designed to illustrate 
-the concept not a rigorous evaluation. The model is trained on ~4,500 
+The concept not a rigorous evaluation. The model is trained on ~4,500 
 synthetic sentence pairs, which is small. I don't yet know how well it 
 generalises to arbitrary domains and text styles.
 
@@ -93,6 +86,8 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
+
 
 
 
