@@ -32,7 +32,7 @@ To test how Scout handles directional logic compared to standard retrieval, we r
 
 **Query (Agent State):** *"My faucet is leaking heavily under the sink."*
 
-| Rank | SBERT (Bi-Encoder) | Cross-Encoder (MS-MARCO) | **Scout (Directional Gain)** |
+| Rank | SBERT (Bi-Encoder) | Cross-Encoder (MS-MARCO) (After Sigmoid) | **Scout (Directional Gain)** |
 | :--- | :--- | :--- | :--- |
 | **1.** | `[0.4821]` Buy the best faucet here on amazon | `[0.0022]` Buy the best faucet here on amazon | `[0.9585]` **Tighten the main valve nut using a wrench.** |
 | **2.** | `[0.4532]` Turn off the main water supply immediately. | `[0.0010]` Sinks are usually made of porcelain... | `[0.9388]` **Turn off the main water supply immediately.** |
@@ -59,6 +59,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
