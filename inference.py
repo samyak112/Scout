@@ -1,8 +1,10 @@
+import os
 import time
 import torch
 from typing import Optional
 from sentence_transformers import SentenceTransformer, util
 from sentence_transformers.cross_encoder import CrossEncoder
+from huggingface_hub import hf_hub_download
 from main import Scout
 from response_types import MatrixResult, RankResult, CompeteResult
 
@@ -12,19 +14,22 @@ class ScoutInference:
     Directional relevance scorer.
 
     Args:
-        checkpoint_path: Path to a Scout .pt checkpoint file.
+        checkpoint_path: Path to a local .pt checkpoint. If None, downloads
+                         automatically from Hugging Face.
         encoder:         Sentence encoder model name (must match what Scout was trained with).
         device:          'cuda', 'cpu', or None for auto-detect.
         temperature:     Softens or sharpens output scores. Default 0.5.
     """
 
+    HF_REPO_ID            = "SpiderHomie/scout"       # update before publishing
+    HF_FILENAME           = "scout_best.pt"
     DEFAULT_CHECKPOINT    = "checkpoints/scout_best.pt"
     DEFAULT_ENCODER       = "sentence-transformers/all-mpnet-base-v2"
     DEFAULT_CROSS_ENCODER = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     def __init__(
         self,
-        checkpoint_path: str = DEFAULT_CHECKPOINT,
+        checkpoint_path: Optional[str] = None,
         encoder: str = DEFAULT_ENCODER,
         device: Optional[str] = None,
         temperature: float = 0.5,
@@ -37,12 +42,14 @@ class ScoutInference:
         print(f"[Scout] Loading encoder   : {encoder}")
         self._encoder = SentenceTransformer(encoder, device=self.device)
 
-        print(f"[Scout] Loading checkpoint: {checkpoint_path}")
-        self._model = self._load_checkpoint(checkpoint_path)
+        resolved = self._resolve_checkpoint(checkpoint_path)
+        print(f"[Scout] Loading checkpoint: {resolved}")
+        self._model = self._load_checkpoint(resolved)
 
         self._cross_encoder = None  # lazy loaded only if compete=True
 
         print(f"[Scout] Ready on {self.device}")
+
 
     def rank(
         self,
@@ -154,14 +161,33 @@ class ScoutInference:
         self._sync()
         t0 = time.perf_counter()
 
-        import torch as _torch
         raw    = self._cross_encoder.predict(pairs)
-        scores = _torch.sigmoid(_torch.tensor(raw)).tolist()
+        scores = torch.sigmoid(torch.tensor(raw)).tolist()
 
         self._sync()
         t1 = time.perf_counter()
 
         return scores, (t1 - t0) * 1000
+
+    def _resolve_checkpoint(self, checkpoint_path: Optional[str]) -> str:
+        # 1. Explicit path provided and exists — use it
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            return checkpoint_path
+
+        # 2. Default local path exists — use it
+        if os.path.exists(self.DEFAULT_CHECKPOINT):
+            return self.DEFAULT_CHECKPOINT
+
+        # 3. Download from Hugging Face
+        print(f"[Scout] Checkpoint not found locally, downloading from HuggingFace ({self.HF_REPO_ID})...")
+        os.makedirs("checkpoints", exist_ok=True)
+        path = hf_hub_download(
+            repo_id=self.HF_REPO_ID,
+            filename=self.HF_FILENAME,
+            local_dir="checkpoints",
+        )
+        print(f"[Scout] Saved to {path}")
+        return path
 
     def _sync(self):
         if self.device.type == "cuda":
@@ -170,7 +196,6 @@ class ScoutInference:
     def _score_matrix(
         self, sentences: list[str]
     ) -> tuple[list[list[float]], float, float]:
-
         with torch.no_grad():
             self._sync()
             t0 = time.perf_counter()
