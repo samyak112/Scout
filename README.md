@@ -25,9 +25,9 @@ Existing methods are industry standards for search and QA, but they optimize for
 - **Bi-Encoders (e.g., SBERT):** Highly efficient for symmetric topic matching, but keyword overlap can occasionally retrieve "semantic echoes" when directional causality is needed.
 - **Cross-Encoders (e.g., MS-MARCO):** Excellent for deep Question/Answer relevance, but evaluating one pair at a time can be computationally heavy for $N \times N$ discourse graphing. 
 
-## Benchmark: Agentic Troubleshooting
+## Test: Agentic Troubleshooting
 
-To test how Scout handles directional logic compared to standard retrieval, we ran a troubleshooting benchmark specifically designed to trap models with topical noise.
+See [`example.py`](example.py) to run it yourself.
 
 **Query (Agent State):** *"My faucet is leaking heavily under the sink."*
 
@@ -67,10 +67,6 @@ scout/
     └── scout_best.pt
 ```
 
-## Usage
-
-See [`example.py`](example.py) for a full working demo.
-
 ## A Note on What This Actually Is
 
 This is an architecture experiment, not a production retrieval system.
@@ -105,4 +101,5 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
