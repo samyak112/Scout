@@ -2,6 +2,10 @@ from inference import ScoutInference
 
 scout = ScoutInference()
 
+# ──────────────────────────────────────────────
+# Demo 1: Retrieval
+# ──────────────────────────────────────────────
+
 result = scout.rank(
     query="My bread dough didn't rise at all after sitting for two hours.",
     candidates=[
@@ -17,16 +21,12 @@ result = scout.rank(
 print("=" * 60)
 print("RETRIEVAL")
 print("=" * 60)
-print(f"Query: {result.query}\n")
-print(f"{'Rank':<6} {'Score':<8} Candidate")
-print("-" * 60)
-for rank, idx in enumerate(result.ranking):
-    print(f"{rank + 1:<6} {result.scores[idx]:<8.4f} {result.candidates[idx]}")
+print(result)
 
-print(f"\n⏱  Encoding: {result.encoding_ms:.1f}ms | "
-      f"Scoring: {result.scoring_ms:.1f}ms | "
-      f"Total: {result.encoding_ms + result.scoring_ms:.1f}ms")
 
+# ──────────────────────────────────────────────
+# Demo 2: Matrix
+# ──────────────────────────────────────────────
 
 result = scout.matrix([
     "The faucet in the kitchen is leaking.",
@@ -36,20 +36,27 @@ result = scout.matrix([
 ])
 
 print("\n\n" + "=" * 60)
-print("MATRIX — Directional Relevance")
-print("matrix[i][j] = how much sentence j adds value to sentence i")
+print("MATRIX")
 print("=" * 60)
+print(result)
 
-n = len(result.sentences)
-print("\n" + " " * 6 + "  ".join(f"S{j}".ljust(6) for j in range(n)))
-for i in range(n):
-    row = f"S{i}    " + "  ".join(f"{result.matrix[i][j]:.3f}".ljust(6) for j in range(n))
-    print(row)
 
-print("\nSentences:")
-for i, s in enumerate(result.sentences):
-    print(f"  S{i}: {s}")
+# ──────────────────────────────────────────────
+# Demo 3: Compete — Scout vs SBERT vs Cross-Encoder
+# ──────────────────────────────────────────────
 
-print(f"\n⏱  Encoding: {result.encoding_ms:.1f}ms | "
-      f"Scoring: {result.scoring_ms:.1f}ms | "
-      f"Total: {result.encoding_ms + result.scoring_ms:.1f}ms")
+result = scout.rank(
+    query="My faucet is leaking heavily under the sink.",
+    candidates=[
+        "Tighten the main valve nut using a wrench.",
+        "Turn off the main water supply immediately.",
+        "Buy the best faucet here on amazon.",
+        "Sinks are usually made of porcelain or stainless steel.",
+    ],
+    compete=True,
+)
+
+print("\n\n" + "=" * 60)
+print("COMPETE — Scout vs SBERT vs Cross-Encoder")
+print("=" * 60)
+print(result)

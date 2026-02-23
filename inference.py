@@ -1,9 +1,10 @@
 import time
 import torch
 from typing import Optional
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
+from sentence_transformers.cross_encoder import CrossEncoder
 from main import Scout
-from response_types import MatrixResult, RankResult
+from response_types import MatrixResult, RankResult, CompeteResult
 
 
 class ScoutInference:
@@ -17,8 +18,9 @@ class ScoutInference:
         temperature:     Softens or sharpens output scores. Default 0.5.
     """
 
-    DEFAULT_CHECKPOINT = "checkpoints/scout_best.pt"
-    DEFAULT_ENCODER    = "sentence-transformers/all-mpnet-base-v2"
+    DEFAULT_CHECKPOINT    = "checkpoints/scout_best.pt"
+    DEFAULT_ENCODER       = "sentence-transformers/all-mpnet-base-v2"
+    DEFAULT_CROSS_ENCODER = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     def __init__(
         self,
@@ -32,14 +34,22 @@ class ScoutInference:
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-        print(f"[Scout] Loading encoder : {encoder}")
+        print(f"[Scout] Loading encoder   : {encoder}")
         self._encoder = SentenceTransformer(encoder, device=self.device)
 
         print(f"[Scout] Loading checkpoint: {checkpoint_path}")
         self._model = self._load_checkpoint(checkpoint_path)
+
+        self._cross_encoder = None  # lazy loaded only if compete=True
+
         print(f"[Scout] Ready on {self.device}")
 
-    def rank(self, query: str, candidates: list[str]) -> RankResult:
+    def rank(
+        self,
+        query: str,
+        candidates: list[str],
+        compete: bool = False,
+    ) -> RankResult | CompeteResult:
         """
         Given a query and a list of candidates, score and rank how much
         each candidate resolves or answers the query.
@@ -47,10 +57,15 @@ class ScoutInference:
         Args:
             query:      The question or problem statement.
             candidates: List of candidate sentences to rank.
+            compete:    If True, also runs SBERT and Cross-Encoder and returns
+                        all three sets of scores side by side.
 
         Returns:
-            RankResult with scores, ranking, timing, and full NxN matrix.
+            RankResult normally. CompeteResult when compete=True.
         """
+        if compete:
+            return self._compete(query, candidates)
+
         sentences = [query] + candidates
         matrix, encoding_ms, scoring_ms = self._score_matrix(sentences)
 
@@ -72,9 +87,6 @@ class ScoutInference:
         Compute the full NxN directional relevance matrix for a set of sentences.
         matrix[i][j] = how much sentence j adds value to sentence i.
 
-        Useful for clustering, segmentation, or exploring relationships
-        within a document.
-
         Args:
             sentences: List of sentences to compare.
 
@@ -90,6 +102,66 @@ class ScoutInference:
             scoring_ms=scoring_ms,
         )
 
+    def _compete(self, query: str, candidates: list[str]) -> CompeteResult:
+        sbert_scores, sbert_enc_ms, sbert_score_ms = self._run_sbert(query, candidates)
+        ce_scores, ce_ms                            = self._run_cross_encoder(query, candidates)
+        sentences                                   = [query] + candidates
+        scout_matrix, scout_enc_ms, scout_score_ms  = self._score_matrix(sentences)
+        scout_scores                                = scout_matrix[0][1:]
+
+        return CompeteResult(
+            query=query,
+            candidates=candidates,
+            scout_scores=scout_scores,
+            sbert_scores=sbert_scores,
+            cross_encoder_scores=ce_scores,
+            scout_encoding_ms=scout_enc_ms,
+            scout_scoring_ms=scout_score_ms,
+            sbert_encoding_ms=sbert_enc_ms,
+            sbert_scoring_ms=sbert_score_ms,
+            cross_encoder_ms=ce_ms,
+        )
+
+    def _run_sbert(
+        self, query: str, candidates: list[str]
+    ) -> tuple[list[float], float, float]:
+        self._sync()
+        t0 = time.perf_counter()
+
+        with torch.no_grad():
+            q_emb = self._encoder.encode([query],    convert_to_tensor=True, device=self.device)
+            c_emb = self._encoder.encode(candidates, convert_to_tensor=True, device=self.device)
+
+        self._sync()
+        t1 = time.perf_counter()
+
+        scores = util.cos_sim(q_emb, c_emb)[0].cpu().tolist()
+
+        self._sync()
+        t2 = time.perf_counter()
+
+        return scores, (t1 - t0) * 1000, (t2 - t1) * 1000
+
+    def _run_cross_encoder(
+        self, query: str, candidates: list[str]
+    ) -> tuple[list[float], float]:
+        if self._cross_encoder is None:
+            print(f"[Scout] Loading cross-encoder: {self.DEFAULT_CROSS_ENCODER}")
+            self._cross_encoder = CrossEncoder(self.DEFAULT_CROSS_ENCODER, device=self.device)
+
+        pairs = [[query, c] for c in candidates]
+
+        self._sync()
+        t0 = time.perf_counter()
+
+        import torch as _torch
+        raw    = self._cross_encoder.predict(pairs)
+        scores = _torch.sigmoid(_torch.tensor(raw)).tolist()
+
+        self._sync()
+        t1 = time.perf_counter()
+
+        return scores, (t1 - t0) * 1000
 
     def _sync(self):
         if self.device.type == "cuda":
@@ -100,8 +172,6 @@ class ScoutInference:
     ) -> tuple[list[list[float]], float, float]:
 
         with torch.no_grad():
-
-            # --- Encoding ---
             self._sync()
             t0 = time.perf_counter()
 
@@ -114,7 +184,6 @@ class ScoutInference:
             self._sync()
             t1 = time.perf_counter()
 
-            # --- Scoring ---
             logits = self._model(embeddings)                    # [1, N, N]
             scores = torch.sigmoid(logits / self.temperature)   # [1, N, N]
             scores = scores.squeeze(0).cpu().tolist()           # [N, N]
@@ -122,10 +191,7 @@ class ScoutInference:
             self._sync()
             t2 = time.perf_counter()
 
-        encoding_ms = (t1 - t0) * 1000
-        scoring_ms  = (t2 - t1) * 1000
-
-        return scores, encoding_ms, scoring_ms
+        return scores, (t1 - t0) * 1000, (t2 - t1) * 1000
 
     def _load_checkpoint(self, path: str) -> Scout:
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)

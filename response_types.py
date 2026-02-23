@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import numpy as np
 
 
 @dataclass
@@ -54,4 +55,62 @@ class MatrixResult:
             f"Scoring: {self.scoring_ms:.1f}ms | "
             f"Total: {self.total_ms:.1f}ms"
         )
+        return "\n".join(lines)
+
+
+@dataclass
+class CompeteResult:
+    query: str
+    candidates: list[str]
+    scout_scores: list[float]
+    sbert_scores: list[float]
+    cross_encoder_scores: list[float]
+    scout_encoding_ms: float
+    scout_scoring_ms: float
+    sbert_encoding_ms: float
+    sbert_scoring_ms: float
+    cross_encoder_ms: float
+
+    @property
+    def scout_total_ms(self) -> float:
+        return self.scout_encoding_ms + self.scout_scoring_ms
+
+    @property
+    def sbert_total_ms(self) -> float:
+        return self.sbert_encoding_ms + self.sbert_scoring_ms
+
+    def __repr__(self):
+        n = len(self.candidates)
+
+        scout_order = sorted(range(n), key=lambda i: self.scout_scores[i], reverse=True)
+        col_w = max(len(c) for c in self.candidates) + 2
+
+        lines = [
+            f"Query: {self.query!r}\n",
+            f"{'Candidate':<{col_w}} {'Scout':>8}  {'SBERT':>8}  {'CrossEnc':>8}",
+            "-" * (col_w + 32),
+        ]
+
+        for idx in scout_order:
+            lines.append(
+                f"{self.candidates[idx]:<{col_w}} "
+                f"{self.scout_scores[idx]:>8.4f}  "
+                f"{self.sbert_scores[idx]:>8.4f}  "
+                f"{self.cross_encoder_scores[idx]:>8.4f}"
+            )
+
+        lines.append(
+            f"\n⏱  Scout : encoding {self.scout_encoding_ms:.1f}ms | "
+            f"scoring {self.scout_scoring_ms:.1f}ms | "
+            f"total {self.scout_total_ms:.1f}ms"
+        )
+        lines.append(
+            f"⏱  SBERT : encoding {self.sbert_encoding_ms:.1f}ms | "
+            f"scoring {self.sbert_scoring_ms:.1f}ms | "
+            f"total {self.sbert_total_ms:.1f}ms"
+        )
+        lines.append(
+            f"⏱  Cross : total {self.cross_encoder_ms:.1f}ms"
+        )
+
         return "\n".join(lines)
