@@ -87,19 +87,12 @@ where it works well or breaks badly, I want to know.
 
 One thing i have noticed is that Scout doesnt works fine when there are only 2-3 sentences because the results are coming directly from attention's qk mechanism so i suspect that when there are less sentences there is not much to attend to and thats when this happens
 
-## Applications
-These are some applications where I think scout would be helpful
-
-- Search: Given query A's row, the highest-scoring B is my answer
-- Clustering: Find groups where sentences mutually attend to each other
-- Topic detection: Track when attention patterns shift across a document
-- Asymmetry analysis: Measure whether A→B ≠ B→A
-
 ## Current Status
 
 The model is currently in active testing. 
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
