@@ -162,7 +162,7 @@ class ScoutInference:
         t0 = time.perf_counter()
 
         raw    = self._cross_encoder.predict(pairs)
-        scores = torch.sigmoid(torch.tensor(raw)).tolist()
+        scores = torch.tensor(raw).tolist()
 
         self._sync()
         t1 = time.perf_counter()

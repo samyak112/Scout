@@ -15,7 +15,8 @@ result = scout.rank(
         "You should cover the bread dough with a damp towel while it is sitting and rising.", # Tangential Advice
         "Sometimes bread dough simply won't rise even if you let it sit for over two hours.", # Pure Echo
         "Flour contains gluten proteins that form a network to trap gas bubbles." # Unrelated Fact
-    ]
+    ],
+    compete=True
 )
 
 print("=" * 60)
