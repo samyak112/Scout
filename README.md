@@ -19,11 +19,18 @@ This asymmetry is primarily useful for:
 - **Clustering:** Grouping sentences by mutual information gain.
 - **Segmentation:** Detecting when a procedural chain logically shifts.
 
-## Why not use existing methods?
+## Can't I just fine-tune a standard Bi-Encoder or Cross-Encoder?
 
-Existing methods are industry standards for search and QA, but they optimize for different mathematical goals:
-- **Bi-Encoders (e.g., SBERT):** Highly efficient for symmetric topic matching, but keyword overlap can occasionally retrieve "semantic echoes" when directional causality is needed.
-- **Cross-Encoders (e.g., MS-MARCO):** Excellent for deep Question/Answer relevance, but evaluating one pair at a time can be computationally heavy for $N \times N$ discourse graphing. 
+**Technically, yes, but hear me out.**
+
+1. **Bi-Encoders (like SBERT) are stuck in "Similarity":** You can train them on all the directional data in the world, but the math is still symmetric ($A \cdot B = B \cdot A$). They can't tell the difference between "Cause $\rightarrow$ Effect" and "Effect $\rightarrow$ Cause" because they are built to measure distance, not flow.
+    
+2. **Cross-Encoders (like BERT) are "Slow":** They can handle the logic perfectly, but they have to evaluate pairs one-by-one. If you want to see how 50 sentences relate to each other, you have to run the model 2,500 times. That’s a massive compute tax.
+   
+
+**Scout:** The real goal with Scout was to see if we could just **rip out the attention mechanism** and use it as the scoring engine itself. By using asymmetric projections ($W_Q \neq W_K$), we get that directional "Cross-Encoder" logic but keep the speed of a Bi-Encoder.
+
+The "power" here is that Scout gives you a full **$N \times N$ matrix** (a complete map of how every sentence relates to every other sentence) in one quick pass. It turns a "Search List" into a "Reasoning Graph" without making your CPU cry.
 
 ## Test: Agentic Troubleshooting
 
@@ -65,9 +72,8 @@ The model will be downloaded automatically from Hugging Face on first run.
 
 This is an architecture experiment, not a production retrieval system.
 
-The concept not a rigorous evaluation. The model is trained on ~4,500 
-synthetic sentence pairs, which is small. I don't yet know how well it 
-generalises to arbitrary domains and text styles.
+Scout currently doesn't work on every sort of functional relevance test right now, but it can be trained on those. My current assumption is that the tiny training set (4500 arrays) is the bottleneck, but I'm excited to see where the architecture itself might hit a wall. If it misses a specific kind of reasoning even with good data, that’s where the experiment gets interesting.
+
 
 The real question I'm exploring is: can attention mechanics be trained to 
 encode functional utility between sentences rather than just contextual 
@@ -86,6 +92,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
