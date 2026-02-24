@@ -4,7 +4,7 @@
 
 ## What is this?
 
-Scout is an experimental attention model that modifies the standard Transformer attention architecture designed to learn **directional relevance** between sentences. 
+Scout is an experimental attention model that slightly modifies the standard Transformer attention architecture to learn **directional relevance** between sentences. 
 
 Instead of measuring symmetric topical similarity ("are these similar?"), it calculates functional value ("does sentence B provide a logical next step after reading sentence A?").
 
