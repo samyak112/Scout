@@ -59,6 +59,66 @@ class MatrixResult:
 
 
 @dataclass
+class SegmentResult:
+    sentences: list[str]
+    chunks: list[list[int]]         # each chunk is a list of sentence indices
+    boundaries: list[int]           # gap indices where boundaries were placed
+    matrix: list[list[float]]       # full NxN mutual score matrix
+    sim_signal: list[float]         # raw TextTiling similarity at each gap
+    depth_signal: list[float]       # depth score at each gap
+    boundary_threshold: float       # threshold used to detect boundaries
+    encoding_ms: float
+    scoring_ms: float
+
+    @property
+    def total_ms(self) -> float:
+        return self.encoding_ms + self.scoring_ms
+
+    def __repr__(self):
+        n = len(self.sentences)
+        mat = self.matrix
+        lines = []
+
+        # ── NxN matrix ────────────────────────────────────────────────────────
+        lines.append("=" * (6 + 6 * n))
+        lines.append("NxN DIRECTIONAL RELEVANCE MATRIX")
+        lines.append("matrix[i][j] = how much sentence j adds value to sentence i")
+        lines.append("=" * (6 + 6 * n))
+        lines.append("     " + "  ".join(f"S{j:02d}" for j in range(n)))
+        for i in range(n):
+            lines.append(f"S{i:02d}  " + "  ".join(f"{mat[i][j]:.2f}" for j in range(n)))
+
+        # ── TextTiling signal ─────────────────────────────────────────────────
+        lines.append(f"\n{'=' * 62}")
+        lines.append("TEXTTILING SIGNAL  (Scout mutual scores across each gap)")
+        lines.append("=" * 62)
+        lines.append(f"{'Gap':<10} {'Sim':<10} {'Depth':<10} {'Boundary'}")
+        lines.append("-" * 42)
+        for i in range(n - 1):
+            marker = "  ◄ BOUNDARY" if i in self.boundaries else ""
+            lines.append(
+                f"S{i:02d}→S{i+1:02d}  "
+                f"{self.sim_signal[i]:<10.4f}"
+                f"{self.depth_signal[i]:<10.4f}"
+                f"{marker}"
+            )
+        lines.append(f"\nBoundary threshold: {self.boundary_threshold:.4f}")
+
+        # ── Chunks ────────────────────────────────────────────────────────────
+        lines.append(f"\n{'=' * 62}")
+        lines.append(f"DETECTED CHUNKS  ({len(self.chunks)} segments)")
+        lines.append("=" * 62)
+        for i, chunk in enumerate(self.chunks):
+            lines.append(f"\nChunk {i + 1}  ({len(chunk)} sentences)")
+            lines.append("-" * 50)
+            for idx in chunk:
+                lines.append(f"  S{idx:02d}: {self.sentences[idx]}")
+
+        lines.append(f"\n⏱  Encoding: {self.encoding_ms:.1f}ms | Scoring: {self.scoring_ms:.1f}ms | Total: {self.total_ms:.1f}ms")
+        return "\n".join(lines)
+
+
+@dataclass
 class CompeteResult:
     query: str
     candidates: list[str]

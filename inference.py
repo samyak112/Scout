@@ -1,12 +1,13 @@
 import os
 import time
+import numpy as np
 import torch
 from typing import Optional
 from sentence_transformers import SentenceTransformer, util
 from sentence_transformers.cross_encoder import CrossEncoder
 from huggingface_hub import hf_hub_download
 from main import Scout
-from response_types import MatrixResult, RankResult, CompeteResult
+from response_types import MatrixResult, RankResult, CompeteResult, SegmentResult
 
 
 class ScoutInference:
@@ -21,7 +22,7 @@ class ScoutInference:
         temperature:     Softens or sharpens output scores. Default 0.5.
     """
 
-    HF_REPO_ID            = "SpiderHomie/scout"       # update before publishing
+    HF_REPO_ID            = "SpiderHomie/scout"
     HF_FILENAME           = "scout_best.pt"
     DEFAULT_CHECKPOINT    = "checkpoints/scout_best.pt"
     DEFAULT_ENCODER       = "sentence-transformers/all-mpnet-base-v2"
@@ -50,6 +51,9 @@ class ScoutInference:
 
         print(f"[Scout] Ready on {self.device}")
 
+    # ──────────────────────────────────────────────
+    # Public API
+    # ──────────────────────────────────────────────
 
     def rank(
         self,
@@ -109,6 +113,94 @@ class ScoutInference:
             scoring_ms=scoring_ms,
         )
 
+    def segment(
+        self,
+        sentences: list[str],
+        block_size: int = 2,
+        smoothing: int = 0,
+        sensitivity: float = 0.5,
+    ) -> SegmentResult:
+        """
+        Detect paragraph boundaries in a list of sentences using Scout's
+        directional relevance matrix and TextTiling-style valley detection.
+
+        How it works:
+            For each gap between sentence i and i+1, a block similarity score
+            is computed as the average mutual score between the k sentences
+            before and after the gap. mutual(i,j) = min(score(i→j), score(j→i)).
+            Valleys in this signal — where similarity drops — indicate topic or
+            conceptual shifts. Boundaries are placed where the depth score
+            exceeds mean + sensitivity * std.
+
+        Args:
+            sentences:   List of sentences to segment.
+            block_size:  Number of sentences on each side of a gap to compare.
+            smoothing:   Moving average window for the similarity signal (0 = off).
+            sensitivity: Controls how aggressively boundaries are placed.
+                         Lower = more boundaries. Higher = fewer. Default 0.5.
+
+        Returns:
+            SegmentResult with matrix, TextTiling signal, and detected chunks.
+        """
+        matrix_result = self.matrix(sentences)
+        mat = np.array(matrix_result.matrix)
+        n = len(sentences)
+
+        def mutual(i, j):
+            return min(mat[i][j], mat[j][i])
+
+        def block_sim(gap, k):
+            left  = list(range(max(0, gap - k + 1), gap + 1))
+            right = list(range(gap + 1, min(n, gap + 1 + k)))
+            if not left or not right:
+                return 0.0
+            return float(np.mean([mutual(i, j) for i in left for j in right]))
+
+        # Similarity signal
+        sim = np.array([block_sim(g, block_size) for g in range(n - 1)])
+
+        # Smoothing
+        def smooth(signal, window):
+            out = signal.copy()
+            for i in range(len(signal)):
+                lo = max(0, i - window)
+                hi = min(len(signal), i + window + 1)
+                out[i] = np.mean(signal[lo:hi])
+            return out
+
+        sim_smooth = smooth(sim, smoothing) if smoothing > 0 else sim.copy()
+
+        # Depth scores
+        depths = np.zeros(len(sim_smooth))
+        for i in range(1, len(sim_smooth) - 1):
+            depths[i] = (sim_smooth[i-1] - sim_smooth[i]) + (sim_smooth[i+1] - sim_smooth[i])
+
+        threshold = depths.mean() + sensitivity * depths.std()
+        boundaries = [i for i, d in enumerate(depths) if d > threshold]
+
+        # Build chunks
+        chunks, start = [], 0
+        for b in sorted(boundaries):
+            chunks.append(list(range(start, b + 1)))
+            start = b + 1
+        chunks.append(list(range(start, n)))
+
+        return SegmentResult(
+            sentences=sentences,
+            chunks=chunks,
+            boundaries=boundaries,
+            matrix=matrix_result.matrix,
+            sim_signal=sim.tolist(),
+            depth_signal=depths.tolist(),
+            boundary_threshold=float(threshold),
+            encoding_ms=matrix_result.encoding_ms,
+            scoring_ms=matrix_result.scoring_ms,
+        )
+
+    # ──────────────────────────────────────────────
+    # Compete
+    # ──────────────────────────────────────────────
+
     def _compete(self, query: str, candidates: list[str]) -> CompeteResult:
         sbert_scores, sbert_enc_ms, sbert_score_ms = self._run_sbert(query, candidates)
         ce_scores, ce_ms                            = self._run_cross_encoder(query, candidates)
@@ -162,12 +254,16 @@ class ScoutInference:
         t0 = time.perf_counter()
 
         raw    = self._cross_encoder.predict(pairs)
-        scores = torch.tensor(raw).tolist()
+        scores = torch.sigmoid(torch.tensor(raw)).tolist()
 
         self._sync()
         t1 = time.perf_counter()
 
         return scores, (t1 - t0) * 1000
+
+    # ──────────────────────────────────────────────
+    # Internal
+    # ──────────────────────────────────────────────
 
     def _resolve_checkpoint(self, checkpoint_path: Optional[str]) -> str:
         # 1. Explicit path provided and exists — use it
