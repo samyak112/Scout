@@ -104,30 +104,62 @@ class SigmoidAttentionLayer(nn.Module):
         return x, raw_scores
 
 class Scout(nn.Module):
-    def __init__(self, d_model, nhead, num_layers,input_dim=768):
+    def __init__(self, input_dim=768, d_model=384, nhead=8, num_layers=3):
         super().__init__()
-        self.input_proj = nn.Linear(input_dim, d_model) 
-        self.layers = nn.ModuleList([
-            SigmoidAttentionLayer(d_model, nhead) for _ in range(num_layers)
+        self.head_dim = d_model // nhead
+        self.nhead = nhead
+
+        # Each layer has its own WQ and WK — learns different relations
+        self.W_Q = nn.ModuleList([
+            nn.Linear(input_dim, d_model, bias=False) for _ in range(num_layers)
         ])
-        
-        self.aggregator = MultiLayerAggregator(num_layers, nhead)
+        self.W_K = nn.ModuleList([
+            nn.Linear(input_dim, d_model, bias=False) for _ in range(num_layers)
+        ])
 
-    def forward(self, sentence_embeddings):
-        x = self.input_proj(sentence_embeddings)
-        all_raw_scores = []
-        B, N, _ = x.shape
-        
-        # Create diagonal mask once
-        diag_mask = torch.eye(N, dtype=torch.bool, device=x.device).unsqueeze(0)
-        
-        for layer in self.layers:
-            x, raw_score_matrix = layer(x)
-            # Zero out diagonal before aggregation
-            raw_score_matrix = raw_score_matrix.masked_fill(
-                diag_mask.unsqueeze(1), 0.0
-            )
-            all_raw_scores.append(raw_score_matrix)
+        # Learnable weights to combine scores across layers
+        self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
 
-        output = self.aggregator(all_raw_scores)
-        return output
+    def forward(self, x):
+        # x: [batch, N, 768] — Hi = Si always, never updated
+        all_scores = []
+
+        for i in range(len(self.W_Q)):
+            Q = self.W_Q[i](x)  # [batch, N, d_model]
+            K = self.W_K[i](x)  # [batch, N, d_model]
+            scores = Q @ K.transpose(-2, -1) / math.sqrt(self.head_dim)
+            all_scores.append(scores)
+
+        # Weighted combination across layers
+        weights = torch.softmax(self.layer_weights, dim=0)
+        out = sum(w * s for w, s in zip(weights, all_scores))
+        return out
+
+# class Scout(nn.Module):
+#     def __init__(self, d_model, nhead, num_layers,input_dim=768):
+#         super().__init__()
+#         self.input_proj = nn.Linear(input_dim, d_model) 
+#         self.layers = nn.ModuleList([
+#             SigmoidAttentionLayer(d_model, nhead) for _ in range(num_layers)
+#         ])
+        
+#         self.aggregator = MultiLayerAggregator(num_layers, nhead)
+
+#     def forward(self, sentence_embeddings):
+#         x = self.input_proj(sentence_embeddings)
+#         all_raw_scores = []
+#         B, N, _ = x.shape
+        
+#         # Create diagonal mask once
+#         diag_mask = torch.eye(N, dtype=torch.bool, device=x.device).unsqueeze(0)
+        
+#         for layer in self.layers:
+#             x, raw_score_matrix = layer(x)
+#             # Zero out diagonal before aggregation
+#             raw_score_matrix = raw_score_matrix.masked_fill(
+#                 diag_mask.unsqueeze(1), 0.0
+#             )
+#             all_raw_scores.append(raw_score_matrix)
+
+#         output = self.aggregator(all_raw_scores)
+#         return output
