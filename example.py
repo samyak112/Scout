@@ -35,7 +35,7 @@ result = scout.rank(
 print("=" * 60)
 print("RETRIEVAL")
 print("=" * 60)
-# print(result)
+print(result)
 
 
 # ──────────────────────────────────────────────
