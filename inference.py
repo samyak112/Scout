@@ -305,9 +305,20 @@ class ScoutInference:
             self._sync()
             t1 = time.perf_counter()
 
-            logits = self._model(embeddings)                    # [1, N, N]
-            scores = torch.sigmoid(logits / self.temperature)   # [1, N, N]
-            scores = scores.squeeze(0).cpu().tolist()           # [N, N]
+            # 1. Model now returns probabilities [1, N, N]
+            probs = self._model(embeddings) 
+
+            # 2. Handle Temperature (Optional)
+            # Since Squared ReLU is already sharp, we usually just use the raw output.
+            # But if you want a custom temperature, apply it to the probabilities:
+            # if self.temperature != 1.0:
+            #     # We use a small epsilon to avoid log(0)
+            #     # This essentially "re-hyping" the already hyped signal
+            #     probs = torch.pow(probs, 1.0 / self.temperature)
+            #     # Re-normalize to keep it a valid distribution if needed
+            #     probs = probs / (probs.sum(dim=-1, keepdim=True) + 1e-6)
+
+            scores = probs.squeeze(0).cpu().tolist() # [N, N]
 
             self._sync()
             t2 = time.perf_counter()

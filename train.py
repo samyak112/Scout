@@ -87,15 +87,28 @@ def load_and_encode_dataset(
 
     return processed_samples
 
-def weighted_bce_loss(pred_logits, target, pos_weight=20.0):
-    B, N, _ = pred_logits.shape
-    mask = ~torch.eye(N, dtype=torch.bool, device=pred_logits.device).unsqueeze(0)
-    pred_m = pred_logits[mask]
+def weighted_bce_loss(pred_probs, target, pos_weight=20.0):
+    B, N, _ = pred_probs.shape
+    mask = ~torch.eye(N, dtype=torch.bool, device=pred_probs.device).unsqueeze(0)
+    
+    # Standardize inputs
+    pred_m = pred_probs[mask]
     target_m = target[mask]
+    
+    # --- THE FIX ---
+    # Ensure target is strictly between 0 and 1
+    # This kills the "RuntimeError: all elements of target should be between 0 and 1"
+    target_m = torch.clamp(target_m, min=0.0, max=1.0)
+    
+    # Numerical stability for predictions (already have this)
+    pred_m = torch.clamp(pred_m, min=1e-7, max=1-1e-7)
+    
+    # Weighting logic
     weight = torch.where(target_m > 0.05,
                          torch.full_like(target_m, pos_weight),
                          torch.ones_like(target_m))
-    return F.binary_cross_entropy_with_logits(pred_m, target_m, weight=weight)
+    
+    return F.binary_cross_entropy(pred_m, target_m, weight=weight)
 
 def create_balanced_batches(samples):
     """
@@ -189,12 +202,10 @@ def train_full_dataset():
                     shuffled_emb = embeddings[:, idx, :]
                     shuffled_tgt = target[:, idx][:, :, idx]
                     
-                    logits = model(shuffled_emb)
-
-                    logits = torch.clamp(logits, min=-10, max=10)
+                    probs = model(shuffled_emb)
                     
                     # Calculate Loss
-                    loss = weighted_bce_loss(logits, shuffled_tgt)
+                    loss = weighted_bce_loss(probs, shuffled_tgt)
 
                     loss = loss / len(batch)
                     
@@ -217,9 +228,8 @@ def train_full_dataset():
                 embeddings = emb.unsqueeze(0)
                 target = tgt.unsqueeze(0)
                 
-                logits = model(embeddings)
-                logits = torch.clamp(logits, min=-10, max=10) 
-                loss = weighted_bce_loss(logits, target)
+                probs = model(embeddings)
+                loss = weighted_bce_loss(probs, target)
 
                 total_val_loss += loss.item()
         

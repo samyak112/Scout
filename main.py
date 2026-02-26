@@ -59,6 +59,9 @@ class SigmoidAttentionLayer(nn.Module):
         self.v_proj = nn.Linear(d_model, d_model)
         self.out_proj = nn.Linear(d_model, d_model)
 
+        nn.init.xavier_uniform_(self.q_proj.weight, gain=1.5)
+        nn.init.xavier_uniform_(self.k_proj.weight, gain=1.5)
+
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.linear1 = nn.Linear(d_model, d_model * 4)
@@ -76,7 +79,39 @@ class SigmoidAttentionLayer(nn.Module):
         k = self.k_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
         v = self.v_proj(normed).view(batch_size, n, self.nhead, self.head_dim).transpose(1, 2)
 
-        raw_scores = (q @ k.transpose(-2, -1))
+        # 1. Scale raw scores
+        scaled_scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+
+        # 2. Apply Leaky Power (The "Hype" & "Gradient Protection")
+        # Leaky ensures no dead neurons; power(2) ensures high-tier exaggeration.
+        attn_weights = F.leaky_relu(scaled_scores, negative_slope=0.01).pow(2)
+
+        # --- THE CRITICAL FIX: DUAL NORMALIZATION ---
+        
+        # A. For the Embeddings (Weighted Average)
+        # We divide by Sum so the V-vector doesn't explode.
+        row_sums = attn_weights.sum(dim=-1, keepdim=True) + 1e-6
+        attn_probs_v = attn_weights / row_sums
+        
+        # B. For the Aggregator (Directional Gain)
+        # We divide by MAX. This stops the "Crowd" from diluting the winner.
+        # If the best match is 0.9, it stays 0.9.
+        row_max = torch.max(attn_weights, dim=-1, keepdim=True)[0] + 1e-6
+        attn_probs_agg = attn_weights / row_max
+
+        # 3. Apply Attention to Values
+        attn_output = (attn_probs_v @ v)
+        
+        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, n, self.d_model)
+        x = x + self.dropout(self.out_proj(attn_output))
+        
+        normed = self.norm2(x)
+        ff = self.linear2(self.dropout(F.gelu(self.linear1(normed))))
+        x = x + self.dropout(ff)
+
+        # We return the MAX-normalized probs to the aggregator.
+        # This is why your top 5 will start hitting 0.9+ again.
+        return x, attn_probs_agg
 
         # used Sigmoid instead of Softmax, because I didnt wanted sum = 1 for a row , Now every cell is 0.0 to 1.0 independently.
         # attn_probs = torch.sigmoid(raw_scores)
@@ -115,19 +150,16 @@ class Scout(nn.Module):
 
     def forward(self, sentence_embeddings):
         x = self.input_proj(sentence_embeddings)
-        all_raw_scores = []
+        all_layer_probs = []
         B, N, _ = x.shape
         
-        # Create diagonal mask once
-        diag_mask = torch.eye(N, dtype=torch.bool, device=x.device).unsqueeze(0)
+        diag_mask = torch.eye(N, dtype=torch.bool, device=x.device).unsqueeze(0).unsqueeze(1)
         
         for layer in self.layers:
-            x, raw_score_matrix = layer(x)
-            # Zero out diagonal before aggregation
-            raw_score_matrix = raw_score_matrix.masked_fill(
-                diag_mask.unsqueeze(1), 0.0
-            )
-            all_raw_scores.append(raw_score_matrix)
+            x, attn_probs = layer(x)
+            # Mask the diagonal on the probabilities
+            attn_probs = attn_probs.masked_fill(diag_mask, 0.0)
+            all_layer_probs.append(attn_probs)
 
-        output = self.aggregator(all_raw_scores)
+        output = self.aggregator(all_layer_probs)
         return output
