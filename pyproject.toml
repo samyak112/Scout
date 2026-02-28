@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "elasticsearch>=9.3.0",
     "google>=3.0.0",
     "google-genai>=1.62.0",
+    "nltk>=3.9.3",
     "pydantic>=2.12.5",
     "sentence-transformers>=5.2.0",
 ]
