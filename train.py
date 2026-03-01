@@ -89,15 +89,45 @@ def load_and_encode_dataset(
 
     return processed_samples
 
-def weighted_bce_loss(pred_logits, target, pos_weight=20.0):
-    B, N, _ = pred_logits.shape
-    mask = ~torch.eye(N, dtype=torch.bool, device=pred_logits.device).unsqueeze(0)
-    pred_m = pred_logits[mask]
+def similarity_loss(
+    pred_logits,
+    target,
+    alpha=10.0,     # weight for positive targets (imbalance fix)
+    beta_fn=2.0,    # extra penalty for false negatives
+    gamma_fp=3.0    # extra penalty for false positives
+):
+    """
+    Weighted asymmetric MSE for sparse NxN similarity matrices.
+    - alpha: amplifies positive targets
+    - beta_fn: extra weight for false negatives
+    - gamma_fp: extra weight for false positives
+    """
+
+    pred = torch.sigmoid(pred_logits)
+
+    B, N, _ = pred.shape
+
+    # Mask diagonal
+    diag_mask = torch.eye(N, dtype=torch.bool, device=pred.device)
+    mask = ~diag_mask.unsqueeze(0)
+
+    pred_m = pred[mask]
     target_m = target[mask]
-    weight = torch.where(target_m > 0.05,
-                         torch.full_like(target_m, pos_weight),
-                         torch.ones_like(target_m))
-    return F.binary_cross_entropy_with_logits(pred_m, target_m, weight=weight)
+
+    # Base weights (handle sparsity)
+    weights = torch.where(target_m > 0, alpha, 1.0)
+
+    # False negatives (missed positives)
+    false_neg_mask = (target_m > 0) & (pred_m < target_m)
+    weights = torch.where(false_neg_mask, weights * beta_fn, weights)
+
+    # False positives (predicting non-zero for zero)
+    false_pos_mask = (target_m == 0) & (pred_m > 0)
+    weights = torch.where(false_pos_mask, weights * gamma_fp, weights)
+
+    loss = (weights * (pred_m - target_m) ** 2).mean()
+
+    return loss
 
 def create_balanced_batches(samples):
     """
@@ -178,6 +208,8 @@ def train_full_dataset():
         random.shuffle(train_batches)
         
         total_train_loss = 0.0
+
+        # train_batches = [train_batches[0]]
         
         for batch in train_batches:
                 optimizer.zero_grad()
@@ -193,10 +225,9 @@ def train_full_dataset():
                     
                     logits = model(shuffled_emb)
 
-                    logits = torch.clamp(logits, min=-10, max=10)
                     
                     # Calculate Loss
-                    loss = weighted_bce_loss(logits, shuffled_tgt)
+                    loss = similarity_loss(logits, shuffled_tgt)
 
                     loss = loss / len(batch)
                     
@@ -220,8 +251,16 @@ def train_full_dataset():
                 target = tgt.unsqueeze(0)
                 
                 logits = model(embeddings)
-                logits = torch.clamp(logits, min=-10, max=10) 
-                loss = weighted_bce_loss(logits, target)
+                loss = similarity_loss(logits, target)
+
+                # pred = torch.sigmoid(logits)
+
+                # print("Target matrix:")
+                # print(target[0])
+
+                # print("Predicted matrix:")
+                # print(pred[0])
+
 
                 total_val_loss += loss.item()
         
