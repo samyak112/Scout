@@ -338,6 +338,10 @@ Hard Negative Strategy:
 YOUR TASK:
 Generate exactly 7 sentences that form one training batch.
 
+CRITICAL LINGUISTIC RULES (DO NOT VIOLATE):
+
+NO CRUTCH WORDS: Sentences must be grammatically independent. Do NOT use transition words like "This", "These", "Therefore", "Consequently", or "As a result".
+NO BACKWARD-REFERENCING CLAUSES: Do not start sentences with dependent clauses that summarize the previous sentence (e.g., "Armed with the stolen credentials..."). Introduce new information directly.
 The batch should contain diverse directional patterns so the model learns to score based on actual functional value, not patterns.
 
 BATCH STRUCTURE:
@@ -346,7 +350,7 @@ BATCH STRUCTURE:
 Follow the asymmetric pattern above. Create a 3-sentence chain where:
 - A→B: score based on "does B add functional value to A?"
 - B→C: score based on "does C add functional value to B?"
-- Reverse directions: score based on actual functional value (often low, but not forced)
+- Reverse directions: score based on actual functional value (MUST be strictly low)
 - Use ALL variation parameters to make sentences specific and concrete
 - Must demonstrate the linguistic principle given above
 
@@ -362,25 +366,24 @@ Follow the bidirectional pattern above. Create 2 sentences where:
 - A→B: B adds functional value to A (score appropriately)
 - B→A: A adds functional value to B (score appropriately)
 - Both directions should naturally have high scores
-- Each sentence elaborates, explains, or complements the other
+- A and B MUST NOT say the same thing in different words. They must be two distinct halves of a single concept (e.g., Sentence A defines a tool or phenomenon; Sentence B explains the underlying structural/physical mechanism that makes it work). This is strict mutual elaboration, zero paraphrasing.
 - Use variation parameters where relevant
 
 **What makes a pair bidirectional:**
 
-- "Water boils at 100°C at standard pressure" ↔ "The boiling point of water at 1 atm is 100°C"
-    
-    - A→B: HIGH (B clarifies the same fact in different wording)
-    - B→A: HIGH (A reinforces the same fact)
+  "MHC molecules display viral protein fragments on the surface of infected cells." ↔ "T-cell receptors are specifically shaped to recognize the combination of an MHC molecule plus a foreign peptide.
+    A→B: HIGH (B explains what reads the display).
+    B→A: HIGH (A explains what creates the display).
         
-- "Photosynthesis converts sunlight into chemical energy" ↔ "Plants use sunlight to produce sugars during photosynthesis"
-    
-    - A→B: HIGH (B elaborates the process described in A)
-    - B→A: HIGH (A explains the underlying principle behind B)
+- "Plant roots require access to oxygen just as much as they need water to survive." ↔ "Overwatering kills plants by filling all the microscopic air pockets in the soil, effectively suffocating them."
+
+    A→B: HIGH (B provides the practical consequence of the biological rule in A).
+    B→A: HIGH (A provides the underlying reason why the mistake in B is fatal).
         
-- "A polygon is a closed figure with straight sides" ↔ "Polygons are flat shapes bounded by line segments"
-    
-    - A→B: HIGH (B restates A with equivalent clarity)
-    - B→A: HIGH (A reinforces B’s definition)
+- "Baking powder requires an acidic ingredient like buttermilk to activate its leavening properties." ↔ "When the acid mixes with the baking powder, it immediately releases carbon dioxide bubbles that make the batter rise."
+
+    A→B: HIGH (B explains the exact chemical reaction that happens when you follow the rule in A).
+    B→A: HIGH (A provides the practical instruction for how to trigger the reaction described in B).
         
 
 **Guidelines:**
@@ -402,7 +405,6 @@ CRITICAL REQUIREMENTS:
 1. **Use variation parameters**: Incorporate ALL provided parameters
 2. **Be specific**: Use concrete details, numbers, names, actions - no vague generalities
 3. **Score each direction independently based on actual functional value**:
-   - Don't force asymmetry or symmetry
    - Evaluate: "Given that I'm reading A, does B help me understand/execute/apply it?"
    - Then separately: "Given that I'm reading B, does A help me understand/execute/apply it?"
 
@@ -424,8 +426,7 @@ Sentence A adds functional value to sentence B if knowing A improves your abilit
 - Make decisions based on B
 - Fill in missing context for B
 
-**This is directional:** A→B asks "does A help me with B?"
-Evaluate each direction independently.
+This is strictly directional: A→B asks "Given that I just read A, does B provide critical new functional value to my understanding?"Evaluate each direction independently.
 
 SCORING SCALE (0.0 to 1.0):
 - 0.0: No functional value (unrelated or redundant)
@@ -436,7 +437,8 @@ SCORING SCALE (0.0 to 1.0):
 - 1.0: Absolute dependency (B is meaningless without A)
 
 **Score each directional relationship based on the actual functional value you observe.**
-Don't target specific scores - let the relationships determine the scores naturally.
+For the 3-sentence Chain: You MUST write the sentences such that the forward direction (A→B, B→C) scores HIGH (0.8+) and the backward direction (B→A, C→B) scores strictly LOW (0.1-0.4). B relies on A, but A does not rely on B.
+For thread2_internal: Both zero_to_one and one_to_zero MUST be extremely high (0.9 to 1.0). Because they are two distinct halves of the same conceptual mechanism, reading one makes the other critically necessary.
 
 ---
 
@@ -494,7 +496,6 @@ NOTES:
 - Hard negatives have 0.0 scores to everything (no need to list explicitly)
 - Diagonal (sentence to itself) is always 0.0
 - Score each pair honestly based on functional value
-- Don't force specific score ranges - use the full 0.0-1.0 scale
 - do not generate anything other than the given JSON done even write json
 
 Now generate your batch using the provided metadata and parameters.

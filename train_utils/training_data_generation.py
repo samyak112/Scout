@@ -4,7 +4,7 @@ import hashlib
 import json
 from prompts import PROMPTS
 from google import genai
-from training_topics import TOPICS
+from training_topics2 import TOPICS
 from response_type import SentenceChain,Scores
 import os
 from tqdm import tqdm
@@ -16,8 +16,8 @@ client = genai.Client(
     vertexai=True, project=os.environ.get("project_id"), location='us-central1'
 )
 
-DATASET_PATH = "train/dataset.jsonl"
-PROGRESS_PATH = "train/progress.json"
+DATASET_PATH = "train_utils/dataset2.jsonl"
+PROGRESS_PATH = "train_utils/progress.json"
 
 
 def generate_variation_id(domain_idx, type_idx, params_tuple):
@@ -77,7 +77,7 @@ def generate_curriculum(data):
                 "variations": variations
             })
 
-    output_filename = 'training_curriculum.json'
+    output_filename = 'training_curriculum2.json'
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(final_arr, f, indent=2)
 
@@ -133,10 +133,10 @@ def generate_dataset():
     with open(PROGRESS_PATH, "r") as f:
         progress = json.load(f)
 
-    with open("train/training_curriculum.json", "r") as f:
+    with open("train_utils/training_curriculum2.json", "r") as f:
         curriculum = json.load(f)
 
-    with open("train/dataset.jsonl", "r") as f:
+    with open(DATASET_PATH, "r") as f:
         total_data_set = [json.loads(line) for line in f]
 
     local_progress = deepcopy(progress)

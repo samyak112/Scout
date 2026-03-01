@@ -59,6 +59,8 @@ def load_and_encode_dataset(
                 device=device,
                 show_progress_bar=True
             )
+
+        print(len(all_embeddings))
         
         # Save to cache for next time
         print(f"Saving embeddings to {cache_path}...")
