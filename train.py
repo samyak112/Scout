@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 import torch.nn.functional as F
 import random
 import json
-from main import Scout
+from main import Scout,FullModel
 import os
 os.makedirs('checkpoints', exist_ok=True)
 from collections import defaultdict
@@ -16,6 +16,28 @@ print(f"Using device: {device}")
 if device.type == 'cuda':
     print(f"GPU: {torch.cuda.get_device_name(0)}")
     print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+
+def load_dataset(jsonl_path, device):
+    samples = []
+
+    with open(jsonl_path, "r") as f:
+        for line in f:
+            obj = json.loads(line)
+
+            tgt = torch.tensor(
+                obj["target"],
+                dtype=torch.float32,
+                device=device
+            )
+
+            metadata = {
+                'information_type_description': obj['information_type_description'],
+                'domain_name': obj['domain_name']
+            }
+
+            samples.append((obj["sentences"], tgt, metadata))
+
+    return samples
 
 
 def load_and_encode_dataset(
@@ -146,16 +168,28 @@ def train_full_dataset():
     nhead = 8
     num_layers = 3
 
-    model = Scout(d_model=d_model, nhead=nhead, num_layers=num_layers)
+    model = FullModel(
+    d_model=d_model,
+    nhead=nhead,
+    num_layers=num_layers
+).to(device)
     model = model.to(device) 
     model.train()
     
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4,weight_decay=0.05)
+    encoder_params = [p for p in model.encoder.parameters() if p.requires_grad]
+
+    optimizer = optim.AdamW(
+        [
+            {"params": model.scout.parameters(), "lr": 1e-4},
+            {"params": encoder_params, "lr": 1e-5}
+        ],
+        weight_decay=0.05
+    )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=5
     )
 
-    processed_samples = load_and_encode_dataset("train_utils/dataset.jsonl",device=device,sbert_batch_size=128)
+    processed_samples = load_dataset("train_utils/dataset.jsonl", device=device)
     random.shuffle(processed_samples)
     split_idx = int(len(processed_samples) * 0.8)
     
@@ -182,27 +216,24 @@ def train_full_dataset():
         for batch in train_batches:
                 optimizer.zero_grad()
                                 
-                for emb, tgt, meta in batch:
-                    embeddings = emb.unsqueeze(0)
+                for sentences, tgt, meta in batch:
                     target = tgt.unsqueeze(0)
-                    
-                    N = embeddings.shape[1]
-                    idx = torch.randperm(N, device=device)
-                    shuffled_emb = embeddings[:, idx, :]
+
+                    N = len(sentences)
+                    idx = torch.randperm(N)
+
+                    shuffled_sentences = [sentences[i] for i in idx]
                     shuffled_tgt = target[:, idx][:, :, idx]
-                    
-                    logits = model(shuffled_emb)
+
+                    logits = model([shuffled_sentences])  # batch of size 1
 
                     logits = torch.clamp(logits, min=-10, max=10)
-                    
-                    # Calculate Loss
+
                     loss = weighted_bce_loss(logits, shuffled_tgt)
 
                     loss = loss / len(batch)
-                    
                     loss.backward()
-                    
-                    # Track the raw loss value (float only, no graph)
+
                     total_train_loss += (loss.item() * len(batch))
 
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -215,14 +246,13 @@ def train_full_dataset():
         total_val_loss = 0.0
         
         with torch.no_grad():
-            for emb, tgt, meta in val_samples:
-                embeddings = emb.unsqueeze(0)
+            for sentences, tgt, meta in val_samples:
                 target = tgt.unsqueeze(0)
-                
-                logits = model(embeddings)
-                logits = torch.clamp(logits, min=-10, max=10) 
-                loss = weighted_bce_loss(logits, target)
 
+                logits = model([sentences])
+                logits = torch.clamp(logits, min=-10, max=10)
+
+                loss = weighted_bce_loss(logits, target)
                 total_val_loss += loss.item()
         
         avg_val_loss = total_val_loss / len(val_samples)
