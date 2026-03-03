@@ -105,13 +105,16 @@ def loss_fn(pred_logits, target, threshold=0.2, gamma=2.0, beta=2.0, alpha=0.5, 
     mse_loss = (pred_m - target_m) ** 2
 
     low_target_penalty = torch.clamp(pred_m - target_m, min=0.0) ** 2
-    low_target_penalty = low_target_penalty * torch.exp(-target_m * 5.0) 
+    low_target_penalty = low_target_penalty * torch.exp(-target_m * 5.0)
 
-    pointwise_loss = alpha * mse_loss.mean() + (1.0 - alpha) * extreme_loss.mean() + low_target_penalty.mean()
+    # Fix: explicitly punish confident predictions on zero/noise targets
+    zero_target_mask = (target_m < 0.05).float()
+    noise_penalty = zero_target_mask * (pred_m ** 2)
 
-   
-    p_i = pred.unsqueeze(-1)  # Shape: [B, N, N, 1] -> (Batch, Query, Candidate_i, 1)
-    p_j = pred.unsqueeze(-2)  # Shape: [B, N, 1, N] -> (Batch, Query, 1, Candidate_j)
+    pointwise_loss = alpha * mse_loss.mean() + (1.0 - alpha) * extreme_loss.mean() + low_target_penalty.mean() + noise_penalty.mean()
+
+    p_i = pred.unsqueeze(-1)
+    p_j = pred.unsqueeze(-2)
     
     t_i = target.unsqueeze(-1)
     t_j = target.unsqueeze(-2)
@@ -123,7 +126,10 @@ def loss_fn(pred_logits, target, threshold=0.2, gamma=2.0, beta=2.0, alpha=0.5, 
 
     pairwise_errors = torch.relu(dynamic_margin - (p_i - p_j))
 
-    ranking_loss = (pairwise_errors * valid_pairs).sum() / (valid_pairs.sum() + epsilon)
+    diag_mask = ~torch.eye(N, dtype=torch.bool, device=pred.device).unsqueeze(0).unsqueeze(-1)
+    diag_mask = diag_mask & diag_mask.transpose(-2, -1)
+
+    ranking_loss = (pairwise_errors * valid_pairs * diag_mask).sum() / (valid_pairs.sum() + epsilon)
 
     total_loss = pointwise_loss + (lambda_pairwise * ranking_loss)
 
