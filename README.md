@@ -6,9 +6,7 @@
 
 Scout is an experimental attention model that slightly modifies the standard Transformer attention architecture to learn **directional relevance** between sentences. 
 
-It treats sentences as tokens in a custom attention block to generate a full $N \times N$ directional relevance matrix in a single forward pass.
-
-Instead of measuring symmetric topical similarity ("are these similar?"), it calculates functional value ("does sentence B provide a logical next step after reading sentence A?").
+It treats sentences as tokens in a custom attention block and produces a full N×N matrix in a single forward pass — where every cell [i][j] answers one question: "Given that I just read sentence i, does sentence j add functional value?"
 
 **The Core Concept:**
 - `"My faucet is leaking"` $\rightarrow$ `"Tighten the valve nut"` = **High Gain** (Actionable solution)
@@ -16,7 +14,31 @@ Instead of measuring symmetric topical similarity ("are these similar?"), it cal
 - `"My faucet is leaking"` $\rightarrow$ `"Buy the best faucet on Amazon"` = **Low Gain** (Topical match, but lacks immediate utility)
 - BUT `"The valve nut is located under the handle at the base of the faucet"` makes sense for `"Tighten the valve nut"`
 
-This asymmetry is primarily useful for:
+## The N×N Matrix
+
+When you call `scout.matrix(sentences)` (check [example.py](https://github.com/samyak112/Scout/blob/main/example.py) for trying yourself), you get back a full N×N relevance matrix in around 2ms on cpu.
+
+```python
+sentences = [
+    "This function queries the database inside a loop causing N+1 requests.", # S0
+    "Move the query outside the loop and fetch all records in a single call.", # S1
+    "Batching the queries reduced response time from 800ms to 12ms in testing.", # S2
+    "The same N+1 pattern appears in the user profile endpoint as well.",     # S3
+    "Database query optimization is a common topic in backend engineering.",  # S4 noise
+    "Python was created by Guido van Rossum in 1991.",                        # S5 noise
+]
+
+matrix = scout.matrix(sentences)
+
+# matrix[0][1] = 0.827  — problem → fix (high)
+# matrix[1][2] = 0.835  — fix → result (high)
+# matrix[1][0] = 0.151  — fix → problem (low, asymmetry works)
+# matrix[0][3] = 0.330  — same pattern recognized across endpoints (moderate)
+# matrix[4][0] = 0.000  — generic topic sentence (noise rejected)
+# matrix[5][*] = 0.000  — Python history (completely irrelevant, zeroed)
+```
+
+This asymmetry can be useful for:
 - **Retrieval (RAG):** Filtering out "semantic echoes" to find executable actions.
 - **Clustering:** Grouping sentences by mutual information gain.
 - **Segmentation:** Detecting when a procedural chain logically shifts.
@@ -36,7 +58,7 @@ The "power" here is that Scout gives you a full **$N \times N$ matrix** (a compl
 
 ## Test: Agentic Troubleshooting
 
-See [`example.py`](example.py) to run it yourself.
+You can call `scout.rank` to rank a list of candidates against a query. See [`example.py`](example.py) to run it yourself.
 
 **Query (Agent State):** *"My faucet is leaking heavily under the sink."*
 
@@ -56,9 +78,18 @@ By applying an asymmetric $N \times N$ pass, Scout actively lowered the score of
 Scout processes **batches of sentences** and outputs an **N×N relevance matrix** in a single forward pass over pre-computed embeddings.
 
 **Key architecture differences:**
-1. **No positional encoding:** Sentence order shouldn't affect pairwise relevance in a retrieval setting.
-2. **Asymmetric Projections:** Uses separate $W_Q$ (Need) and $W_K$ (Resolution) matrices to map directional logic.
-3. **Sigmoid attention:** Output is calculated via Sigmoid instead of Softmax, allowing relationships to be independent rather than competitive.
+- **No positional encoding** — sentence order doesn't affect pairwise 
+  relevance. Embeddings are passed directly without position signals.
+
+- **Sigmoid attention with dynamic normalization** — sigmoid is used 
+  instead of softmax so each cell [i][j] is scored independently between 
+  0 and 1, rather than competing with other candidates in the same row. 
+
+- **Multi-layer score aggregation** — raw attention scores from each 
+  layer are processed separately through a small Conv2d network, then 
+  combined using learnable softmax weights. The model learns which layers 
+  capture the most useful directional signal rather than averaging across 
+  all layers equally.
 
 ## Installation
 
@@ -74,7 +105,7 @@ The model will be downloaded automatically from Hugging Face on first run.
 
 This is an architecture experiment, not a production retrieval system.
 
-Scout currently doesn't work on every sort of functional relevance test right now, but it can be trained on those. My current assumption is that the tiny training set (4500 arrays) is the bottleneck, but I'm excited to see where the architecture itself might hit a wall. If it misses a specific kind of reasoning even with good data, that’s where the experiment gets interesting.
+Scout currently doesn't work on every sort of functional relevance test right now, but it can be trained on those. My current assumption is that the tiny training set (8500 arrays) is the bottleneck, but I'm excited to see where the architecture itself might hit a wall. If it misses a specific kind of reasoning even with good data, that’s where the experiment gets interesting.
 
 
 The real question I'm exploring is: can attention mechanics be trained to 
@@ -94,6 +125,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
