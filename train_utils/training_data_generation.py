@@ -4,7 +4,7 @@ import hashlib
 import json
 from prompts import PROMPTS
 from google import genai
-from training_topics2 import TOPICS
+from training_topics import TOPICS
 from response_type import SentenceChain,Scores
 import os
 from tqdm import tqdm
@@ -16,7 +16,7 @@ client = genai.Client(
     vertexai=True, project=os.environ.get("project_id"), location='us-central1'
 )
 
-DATASET_PATH = "train_utils/dataset2.jsonl"
+DATASET_PATH = "train_utils/dataset.jsonl"
 PROGRESS_PATH = "train_utils/progress.json"
 
 
@@ -77,54 +77,74 @@ def generate_curriculum(data):
                 "variations": variations
             })
 
-    output_filename = 'training_curriculum2.json'
+    output_filename = 'training_curriculum.json'
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(final_arr, f, indent=2)
 
 def generate_matrix(data):
-    """
-    Takes the specific JSON structure and returns a 7x7 numpy matrix of relevance scores (floats).
-    """
-    
-    # 1. Unpack Sentences
-    asym = data['asymmetric']       # Indices 0, 1, 2 (Thread 1)
-    sym = data['symmetric']         # Indices 3, 4    (Thread 2)
-    neg = data['hard_negatives']    # Indices 5, 6    (Hard Negatives)
-    
-    # Combine into canonical list
-    # [T1_0, T1_1, T1_2, T2_0, T2_1, N1, N2]
-    canonical_sentences = asym + sym + neg
-    n = len(canonical_sentences)  # Should be 7
-    
-    # 2. Initialize Matrix (Default to 0.0)
+    sentences_dict = data['sentences']
+    scores = data['scores']
+
+    # Build canonical list and track index ranges per thread
+    # chains: thread1, thread2 | pairs: thread3, thread4 | negatives last
+    segments = []  # (thread_name, type)
+
+    for key in ['thread1', 'thread2']:
+        if key in sentences_dict:
+            segments.append((key, 'chain'))
+
+    for key in ['thread3', 'thread4']:
+        if key in sentences_dict:
+            segments.append((key, 'pair'))
+
+    canonical = []
+    thread_ranges = {}  # thread_name → (start, end)
+
+    for thread_name, thread_type in segments:
+        start = len(canonical)
+        canonical.extend(sentences_dict[thread_name])
+        thread_ranges[thread_name] = (start, len(canonical))
+
+    canonical.extend(sentences_dict.get('hard_negatives', []))
+
+    n = len(canonical)
     matrix = np.zeros((n, n), dtype=float)
-    
-    # 3. Extract Scores
-    scores: Scores = data['scores']
-    
-    # --- POPULATE THREAD 1 INTERNAL (Indices 0, 1, 2) ---
-    matrix[0, 1] = scores.thread1_internal.zero_to_one
-    matrix[1, 2] = scores.thread1_internal.one_to_two
-    matrix[1, 0] = scores.thread1_internal.one_to_zero
-    matrix[2, 1] = scores.thread1_internal.two_to_one
-    matrix[0, 2] = scores.thread1_internal.zero_to_two
-    matrix[2, 0] = scores.thread1_internal.two_to_zero
-    
-    # --- POPULATE THREAD 2 INTERNAL (Indices 3, 4) ---
-    matrix[3, 4] = scores.thread2_internal.zero_to_one
-    matrix[4, 3] = scores.thread2_internal.one_to_zero
-    
-    # --- POPULATE CROSS-THREAD (Thread 1 ↔ Thread 2) ---
-    # Broadcast average to all pairs in each direction
-    # Thread 1 → Thread 2 (rows 0-2, cols 3-4): 6 pairs
-    matrix[0:3, 3:5] = scores.cross_thread_avg.thread1_to_thread2
-    
-    # Thread 2 → Thread 1 (rows 3-4, cols 0-2): 6 pairs
-    matrix[3:5, 0:3] = scores.cross_thread_avg.thread2_to_thread1
-    
-    # --- HARD NEGATIVES (Indices 5, 6) ---
-    # All connections to/from hard negatives remain 0.0 (already initialized)
-    
+
+    # Populate internal scores
+    for thread_name, thread_type in segments:
+        s, e = thread_ranges[thread_name]
+        internal = getattr(scores, f"{thread_name}_internal", None)
+        if internal is None:
+            continue
+
+        if thread_type == 'chain':
+            matrix[s,   s+1] = internal.zero_to_one
+            matrix[s+1, s+2] = internal.one_to_two
+            matrix[s+1, s]   = internal.one_to_zero
+            matrix[s+2, s+1] = internal.two_to_one
+            matrix[s,   s+2] = internal.zero_to_two
+            matrix[s+2, s]   = internal.two_to_zero
+
+        elif thread_type == 'pair':
+            matrix[s,   s+1] = internal.zero_to_one
+            matrix[s+1, s]   = internal.one_to_zero
+
+    # Populate cross-thread scores
+    cross = scores.cross_thread_avg
+    thread_names = [t[0] for t in segments]
+
+    for i, t1 in enumerate(thread_names):
+        for t2 in thread_names[i+1:]:
+            fwd_val = getattr(cross, f"{t1}_to_{t2}", 0.0) or 0.0
+            bwd_val = getattr(cross, f"{t2}_to_{t1}", 0.0) or 0.0
+
+            s1, e1 = thread_ranges[t1]
+            s2, e2 = thread_ranges[t2]
+
+            matrix[s1:e1, s2:e2] = fwd_val
+            matrix[s2:e2, s1:e1] = bwd_val
+
+    # Hard negatives stay 0.0 — already initialized
     return matrix.tolist()
     
 
@@ -133,7 +153,7 @@ def generate_dataset():
     with open(PROGRESS_PATH, "r") as f:
         progress = json.load(f)
 
-    with open("train_utils/training_curriculum2.json", "r") as f:
+    with open("train_utils/training_curriculum.json", "r") as f:
         curriculum = json.load(f)
 
     with open(DATASET_PATH, "r") as f:
@@ -192,20 +212,19 @@ def generate_dataset():
                     )
 
                     parsed = SentenceChain.model_validate_json(response.text)
-                    asym = parsed.asymmetric
-                    sym = parsed.symmetric
-                    hard_neg = parsed.hard_negatives
+                    sentences_dict = parsed.sentences
 
-                    sentences = asym + sym + hard_neg
+                    # Flatten in canonical order
+                    sentences = []
+                    for key in ['thread1', 'thread2', 'thread3', 'thread4']:
+                        if key in sentences_dict:
+                            sentences.extend(sentences_dict[key])
+                    sentences.extend(sentences_dict.get('hard_negatives', []))
 
-                    matrix = generate_matrix(
-                        {
-                            "asymmetric": asym,
-                            "symmetric": sym,
-                            "hard_negatives": hard_neg,
-                            "scores": parsed.scores,
-                        }
-                    )
+                    matrix = generate_matrix({
+                        "sentences": sentences_dict,
+                        "scores": parsed.scores,
+                    })
                     break  # success
 
                 except Exception as e:
@@ -227,6 +246,7 @@ def generate_dataset():
             
 
             final_set = {
+                "len_sentences":len(sentences),
                 "sentences": sentences,
                 "target": matrix,
                 "domain_name":domain_name,
