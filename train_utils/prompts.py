@@ -336,7 +336,7 @@ Hard Negative Strategy:
 ---
 
 YOUR TASK:
-Generate exactly 7 sentences that form one training batch.
+Generate sentences in the range of 7-12 that form one training batch.
 
 CRITICAL LINGUISTIC RULES (DO NOT VIOLATE):
 
@@ -345,8 +345,13 @@ NO BACKWARD-REFERENCING CLAUSES: Do not start sentences with dependent clauses t
 The batch should contain diverse directional patterns so the model learns to score based on actual functional value, not patterns.
 
 BATCH STRUCTURE:
+- CHAIN: 1-2 chains of 3 sentences each
+- BIDIRECTIONAL PAIRS: 1-2 pairs of 2 sentences each  
+- HARD NEGATIVES: 2-4 sentences
+Total must be between 7 and 12 sentences.
 
-**CHAIN (3 sentences): Train directional evaluation**
+**CHAINS (3 sentences each): Train directional evaluation**
+Include 1 or 2 chains. Each chain is always exactly 3 sentences.
 Follow the asymmetric pattern above. Create a 3-sentence chain where:
 - A→B: score based on "does B add functional value to A?"
 - B→C: score based on "does C add functional value to B?"
@@ -360,7 +365,8 @@ Example chain:
   - Backward (solution→cause→problem): each adds little functional value
   - But score based on what you actually observe, not this pattern
 
-**BIDIRECTIONAL PAIR (2 sentences): Train mutual information gain**  
+**BIDIRECTIONAL PAIRS (2 sentences each): Train mutual information gain**
+Include 1 or 2 bidirectional pairs. Each pair is always exactly 2 sentences.
 Follow the bidirectional pattern above. Create 2 sentences where:
 
 - A→B: B adds functional value to A (score appropriately)
@@ -392,11 +398,19 @@ Follow the bidirectional pattern above. Create 2 sentences where:
 - Avoid hierarchical or causal relationships; focus on **pure equivalence / mutual elaboration**
   
 
-**HARD NEGATIVES (2 sentences): Train to score low when appropriate**
+**HARD NEGATIVES: Train to score low when appropriate**
+Include 2-4 hard negative sentences.
 Follow the hard negative strategy above. Create 2 sentences that:
 - Share domain keywords/context with other sentences
 - Add near-zero functional value to any other sentence
 - Look topically related but provide no functional utility
+
+Choose the combination that fits the domain naturally. Valid combinations:
+- 1 chain + 1 pair + 2 negatives = 7 sentences
+- 1 chain + 1 pair + 4 negatives = 9 sentences
+- 2 chains + 1 pair + 2 negatives = 10 sentences
+- 1 chain + 2 pairs + 2 negatives = 9 sentences
+- 2 chains + 2 pairs + 2 negatives = 12 sentences
 
 ---
 
@@ -457,19 +471,11 @@ Return ONLY valid JSON:
 
 {{
   "sentences": {{
-    "thread1": [
-      "First sentence in chain",
-      "Second sentence in chain",
-      "Third sentence in chain"
-    ],
-    "thread2": [
-      "First concept sentence",
-      "Second concept sentence"
-    ],
-    "hard_negatives": [
-      "First hard negative",
-      "Second hard negative"
-    ]
+    "thread1": ["sentence1", "sentence2", "sentence3"],
+    "thread2": ["sentence1", "sentence2", "sentence3"],
+    "thread3": ["sentence1", "sentence2"],
+    "thread4": ["sentence1", "sentence2"],
+    "hard_negatives": ["sentence1", "sentence2"]
   }},
   "scores": {{
     "thread1_internal": {{
@@ -482,11 +488,33 @@ Return ONLY valid JSON:
     }},
     "thread2_internal": {{
       "zero_to_one": <score>,
+      "one_to_two": <score>,
+      "one_to_zero": <score>,
+      "two_to_one": <score>,
+      "zero_to_two": <score>,
+      "two_to_zero": <score>
+    }},
+    "thread3_internal": {{
+      "zero_to_one": <score>,
+      "one_to_zero": <score>
+    }},
+    "thread4_internal": {{
+      "zero_to_one": <score>,
       "one_to_zero": <score>
     }},
     "cross_thread_avg": {{
-      "thread1_to_thread2": <average score from any thread1 sentence to any thread2 sentence>,
-      "thread2_to_thread1": <average score from any thread2 sentence to any thread1 sentence>
+      "thread1_to_thread2": <score>,
+      "thread2_to_thread1": <score>,
+      "thread1_to_thread3": <score>,
+      "thread3_to_thread1": <score>,
+      "thread1_to_thread4": <score>,
+      "thread4_to_thread1": <score>,
+      "thread2_to_thread3": <score>,
+      "thread3_to_thread2": <score>,
+      "thread2_to_thread4": <score>,
+      "thread4_to_thread2": <score>,
+      "thread3_to_thread4": <score>,
+      "thread4_to_thread3": <score>
     }}
   }}
 }}
@@ -497,6 +525,11 @@ NOTES:
 - Diagonal (sentence to itself) is always 0.0
 - Score each pair honestly based on functional value
 - do not generate anything other than the given JSON done even write json
+- Only include thread keys that exist in your batch. If you only have one chain, 
+  only include thread1_internal. If you only have one pair, only include one pair's 
+  internal scores. Only include cross_thread_avg keys for threads that actually exist.
+- thread1 and thread2 are always chains (3 sentences). thread3 and thread4 are always 
+  pairs (2 sentences). hard_negatives is always a flat list.
 
 Now generate your batch using the provided metadata and parameters.
 """
