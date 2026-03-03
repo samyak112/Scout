@@ -92,60 +92,39 @@ def load_and_encode_dataset(
 def loss_fn(pred_logits, target, threshold=0.2, gamma=2.0, beta=2.0, alpha=0.5, lambda_pairwise=1.5, margin_scale=1.0, epsilon=1e-6):
     B, N, _ = pred_logits.shape
     
-    # User's diagonal mask
     mask = ~torch.eye(N, dtype=torch.bool, device=pred_logits.device).unsqueeze(0)
     pred = torch.sigmoid(pred_logits)
     
-    # ---------------------------------------------------------
-    # PART 1: POINTWISE SCORING (Absolute constraints)
-    # ---------------------------------------------------------
     pred_m = pred[mask]
     target_m = target[mask]
     error = torch.abs(pred_m - target_m)
 
-    # Extreme target emphasis & MSE stabilization
     weight = 1.0 + torch.log1p(target_m + epsilon) * beta
     scale  = 1.0 + (error / threshold) ** gamma
     extreme_loss = (error ** 3) * weight * scale
     mse_loss = (pred_m - target_m) ** 2
 
-    # Confidence damping (The Lexical Trap killer)
     low_target_penalty = torch.clamp(pred_m - target_m, min=0.0) ** 2
     low_target_penalty = low_target_penalty * torch.exp(-target_m * 5.0) 
 
     pointwise_loss = alpha * mse_loss.mean() + (1.0 - alpha) * extreme_loss.mean() + low_target_penalty.mean()
 
-    # ---------------------------------------------------------
-    # PART 2: PAIRWISE RANKING FOR [B, N, N] MATRICES
-    # ---------------------------------------------------------
-    # pred shape is [Batch, Query, Candidate]
-    # We want to compare Candidate_i vs Candidate_j FOR THE SAME Query.
-    
-    # Expand the candidate dimension so they cross over each other
+   
     p_i = pred.unsqueeze(-1)  # Shape: [B, N, N, 1] -> (Batch, Query, Candidate_i, 1)
     p_j = pred.unsqueeze(-2)  # Shape: [B, N, 1, N] -> (Batch, Query, 1, Candidate_j)
     
     t_i = target.unsqueeze(-1)
     t_j = target.unsqueeze(-2)
 
-    # DYNAMIC MASK: Only activate if ground truth says Candidate i > Candidate j.
-    # If they are equal (Symmetric Patterns), this is 0. 
-    # Also naturally ignores self-comparisons (diagonal) since t_i > t_i is False.
     valid_pairs = (t_i > t_j).float()
 
-    # DYNAMIC MARGIN: Required gap based on your ground truth labels
     target_gap = t_i - t_j
     dynamic_margin = target_gap * margin_scale
 
-    # PAIRWISE PENALTY: max(0, margin - (prediction_gap))
     pairwise_errors = torch.relu(dynamic_margin - (p_i - p_j))
 
-    # Average the penalty only over the valid, logically asymmetric pairs
     ranking_loss = (pairwise_errors * valid_pairs).sum() / (valid_pairs.sum() + epsilon)
 
-    # ---------------------------------------------------------
-    # PART 3: COMBINED LOSS
-    # ---------------------------------------------------------
     total_loss = pointwise_loss + (lambda_pairwise * ranking_loss)
 
     return total_loss
