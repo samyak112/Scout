@@ -6,7 +6,7 @@
 
 Scout is an experimental attention model that slightly modifies the standard Transformer attention architecture to learn **directional relevance** between sentences. 
 
-It treats sentences as tokens in a custom attention block and produces a full N×N matrix in a single forward pass — where every cell [i][j] answers one question: "Given that I just read sentence i, does sentence j add functional value?"
+It treats sentences as tokens in a custom attention block and produces a full N×N matrix in a single forward pass where every cell [i][j] answers one question: "Given that I just read sentence i, does sentence j add functional value?"
 
 **The Core Concept:**
 - `"My faucet is leaking"` $\rightarrow$ `"Tighten the valve nut"` = **High Gain** (Actionable solution)
@@ -125,6 +125,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
