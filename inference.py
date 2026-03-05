@@ -37,8 +37,9 @@ class ScoutInference:
     ):
         self.temperature = temperature
         self.device = torch.device(
-            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+            "cpu"
         )
+
 
         print(f"[Scout] Loading encoder   : {encoder}")
         self._encoder = SentenceTransformer(encoder, device=self.device)
