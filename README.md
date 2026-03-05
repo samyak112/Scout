@@ -78,14 +78,14 @@ By applying an asymmetric $N \times N$ pass, Scout actively lowered the score of
 Scout processes **batches of sentences** and outputs an **N×N relevance matrix** in a single forward pass over pre-computed embeddings.
 
 **Key architecture differences:**
-- **No positional encoding** — sentence order doesn't affect pairwise 
+- **No positional encoding** sentence order doesn't affect pairwise 
   relevance. Embeddings are passed directly without position signals.
 
-- **Sigmoid attention with dynamic normalization** — sigmoid is used 
+- **Sigmoid attention with dynamic normalization** sigmoid is used 
   instead of softmax so each cell [i][j] is scored independently between 
   0 and 1, rather than competing with other candidates in the same row. 
 
-- **Multi-layer score aggregation** — raw attention scores from each 
+- **Multi-layer score aggregation** raw attention scores from each 
   layer are processed separately through a small Conv2d network, then 
   combined using learnable softmax weights. The model learns which layers 
   capture the most useful directional signal rather than averaging across 
@@ -125,6 +125,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
