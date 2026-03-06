@@ -89,11 +89,47 @@ def load_and_encode_dataset(
 
     return processed_samples
 
-def loss_fn(pred_logits, target, beta=0.1):
-    N = pred_logits.shape[-1]
+def loss_fn(pred_logits, target, threshold=0.2, gamma=2.0, beta=2.0, alpha=0.5, lambda_pairwise=0.5, margin_scale=0.3, epsilon=1e-6):
+    B, N, _ = pred_logits.shape
+    
     mask = ~torch.eye(N, dtype=torch.bool, device=pred_logits.device).unsqueeze(0)
     pred = torch.sigmoid(pred_logits)
-    return F.smooth_l1_loss(pred[mask], target[mask], beta=beta)
+    
+    pred_m = pred[mask]
+    target_m = target[mask]
+    error = torch.abs(pred_m - target_m)
+
+    weight = 1.0 + torch.log1p(target_m + epsilon) * beta
+    scale  = 1.0 + (error / threshold) ** gamma
+    extreme_loss = (error ** 3) * weight * scale
+    mse_loss = (pred_m - target_m) ** 2
+
+    low_target_penalty = torch.clamp(pred_m - target_m, min=0.0) ** 2
+    low_target_penalty = low_target_penalty * torch.exp(-target_m * 5.0)
+
+    pointwise_loss = alpha * mse_loss.mean() + (1.0 - alpha) * extreme_loss.mean() + low_target_penalty.mean()
+
+    p_i = pred.unsqueeze(-1)
+    p_j = pred.unsqueeze(-2)
+    
+    t_i = target.unsqueeze(-1)
+    t_j = target.unsqueeze(-2)
+
+    valid_pairs = (t_i > t_j).float()
+
+    target_gap = t_i - t_j
+    dynamic_margin = target_gap * margin_scale
+
+    pairwise_errors = torch.relu(dynamic_margin - (p_i - p_j))
+
+    diag_mask = ~torch.eye(N, dtype=torch.bool, device=pred.device).unsqueeze(0).unsqueeze(-1)
+    diag_mask = diag_mask & diag_mask.transpose(-2, -1)
+
+    ranking_loss = (pairwise_errors * valid_pairs * diag_mask).sum() / (valid_pairs.sum() + epsilon)
+
+    total_loss = pointwise_loss + (lambda_pairwise * ranking_loss)
+
+    return total_loss
 
 def create_balanced_batches(samples, batch_size=9, stride=None):
     """

@@ -48,7 +48,7 @@ class MultiLayerAggregator(nn.Module):
         return final
 
 class SigmoidAttentionLayer(nn.Module):
-    def __init__(self, d_model, nhead, dropout=0.25):
+    def __init__(self, d_model, nhead, dropout=0.3):
         super().__init__()
         self.d_model = d_model
         self.nhead = nhead
