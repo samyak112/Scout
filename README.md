@@ -91,6 +91,23 @@ Scout processes **batches of sentences** and outputs an **N×N relevance matrix*
   capture the most useful directional signal rather than averaging across 
   all layers equally.
 
+
+## What I learned building this
+
+The original premise was that a single score could capture relevance between sentences in a way that would generalize across tasks. That turned out to be wrong assumption. I wanted it to just learn discourse not a specific task and i expected that this discourse can be used across any task.
+
+When I tried running Scout on standard benchmarks, it worked on some and failed on others. Because relevance is not atomic. For RAG retrieval, relevance means actionable next step. For clustering, it means topical overlap. For segmentation, it means discourse boundary. For agentic memory, it means informational dependency. These are not the same thing. A single scalar cannot satisfy all of them simultaneously without collapsing into a confused average. Because Scout might score something higher which might not make sense in a specific task.
+
+I tried to solve similarity by introducing a new label called relevance, but relevance itself is not atomic.
+
+What Scout actually learned to encode is something closer to discourse structure the functional flow between sentences, which steps follow which, what resolves what. That's a real and useful signal. It just isn't a universal definition of relevance that works for every task out of the box.
+
+## What's next
+
+The question now is whether Scout's weights which have learned about discourse and functional flow can be fine-tuned for specific tasks and become useful in those narrow contexts.
+
+The experiment I want to run: take the current checkpoint, fine-tune it on a specific task like RAG reranking or document segmentation with a small labeled dataset, and see whether the discourse understanding Scout already has transfers and am able to get Cross encoder like accuracy for the same speed that i have currently i.e 4-5ms for 100 sentences inference.
+
 ## Installation
 
 Requires Python 3.9+
@@ -106,7 +123,6 @@ The model will be downloaded automatically from Hugging Face on first run.
 This is an architecture experiment, not a production retrieval system.
 
 Scout currently doesn't work on every sort of functional relevance test right now, but it can be trained on those. My current assumption is that the tiny training set (8500 arrays) is the bottleneck, but I'm excited to see where the architecture itself might hit a wall. If it misses a specific kind of reasoning even with good data, that’s where the experiment gets interesting.
-
 
 The real question I'm exploring is: can attention mechanics be trained to 
 encode functional utility between sentences rather than just contextual 
@@ -125,6 +141,7 @@ The model is currently in active testing.
 * **Training Data:** Trained on diverse synthetic directional datasets (e.g., troubleshooting chains, conversational adjacency pairs, and epistemic scaffolding), alongside cross-domain negatives.
 * **Validation Goal:** Testing whether sequence-level attention mechanics can reliably learn functional relevance without token-level supervision.
 * **Application:** Early RAG benchmarks indicate the model functions well as an $O(1)$ semantic filter to suppress topical noise and isolate actionable steps in agentic workflows.
+
 
 
 
